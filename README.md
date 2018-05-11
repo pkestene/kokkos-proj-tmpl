@@ -3,7 +3,7 @@ A minimal cmake based project skeleton for developping a kokkos application
 
 ## Download this skeleton
 
-``bash
+```bash
 git clone --recursive git@github.com:pkestene/kokkos-proj-tmpl.git
 ```
 
