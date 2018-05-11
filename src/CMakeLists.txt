@@ -10,6 +10,20 @@ set (EXE_NAME_SRC
   saxpy_kokkos_lambda.cpp
   )
 
+if (KOKKOS_ENABLE_CUDA)
+  set (EXE_NAME_SRC
+    ${EXE_NAME_SRC}
+    CudaTimer.h
+    )
+else()
+  set (EXE_NAME_SRC
+    ${EXE_NAME_SRC}
+    OpenMPTimer.h
+    OpenMPTimer.cpp
+    )  
+endif()
+  
+
 # define how to build and link
 add_executable(${EXE_NAME}
   ${EXE_NAME_SRC})

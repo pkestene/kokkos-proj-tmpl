@@ -49,6 +49,13 @@
 // Include Kokkos Headers
 #include<Kokkos_Core.hpp>
 
+
+#ifdef KOKKOS_ENABLE_CUDA
+#include "CudaTimer.h"
+#else
+#include "OpenMPTimer.h"
+#endif
+
 // ===============================================================
 // ===============================================================
 // ===============================================================
@@ -66,10 +73,13 @@ void test_saxpy(int length, int nrepeat) {
   });
 
   // Time saxpy computation
-  struct timeval begin,end;
+#ifdef KOKKOS_ENABLE_CUDA
+  CudaTimer timer;
+#else
+  OpenMPTimer timer;
+#endif
 
-  gettimeofday(&begin,NULL);
-
+  timer.start();
   for(int k = 0; k < nrepeat; k++) {
 
     // Do saxpy
@@ -78,13 +88,13 @@ void test_saxpy(int length, int nrepeat) {
     });
 
   }
-  gettimeofday(&end,NULL);
-
+  timer.stop();
+  
   // Print results
-  double time = 1.0*(end.tv_sec-begin.tv_sec) + 1.0e-6*(end.tv_usec-begin.tv_usec);
+  double time_seconds = timer.elapsed();
 
-  printf("#VectorLength Time(s) TimePerIterations(s) size(MB) BW(GB/s)\n");
-  printf("%i %lf %e %lf %lf\n",length,time,time/nrepeat,1.0e-6*length*3*8,1.0e-9*length*3*nrepeat*8/time);
+  printf("#VectorLength  Time(s) TimePerIterations(s) size(MB) BW(GB/s)\n");
+  printf("%13i %8lf %20.3e  %3.3f %3.3f\n",length,time_seconds,time_seconds/nrepeat,1.0e-6*length*3*8,1.0e-9*length*3*nrepeat*8/time_seconds);
 
 } // test_saxpy
 
