@@ -9,7 +9,7 @@ git clone --recursive git@github.com:pkestene/kokkos-proj-tmpl.git
 
 ## How to build ?
 
-1. Build with target device OpenMP
+### Build with target device OpenMP
 
 ```bash
 mkdir build_openmp
@@ -22,7 +22,7 @@ make
 
 Optionnally you can enable HWLOC by passing -DKOKKOS_ENABLE_HWLOC=ON on cmake's command line (or in ccmake curse gui).
 
-2. Build with target device CUDA
+### Build with target device CUDA
 
 You **NEED** to use nvcc_wrapper as the CXX compiler. nvcc_wrapper is located in kokkos sources (cloned as git submodule), int the bin subdirectory. You can set the CXX env variable, like this
 
