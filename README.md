@@ -24,7 +24,7 @@ Optionnally you can enable HWLOC by passing -DKOKKOS_ENABLE_HWLOC=ON on cmake's 
 
 2. Build with target device CUDA
 
-You *NEED* to use nvcc_wrapper as the CXX compiler. nvcc_wrapper is located in kokkos sources (cloned as git submodule), int the bin subdirectory. You can set the CXX env variable, like this
+You **NEED** to use nvcc_wrapper as the CXX compiler. nvcc_wrapper is located in kokkos sources (cloned as git submodule), int the bin subdirectory. You can set the CXX env variable, like this
 
 ```bash
 mkdir build_cuda
@@ -36,6 +36,6 @@ make
 ./src/saxpy_kokkos_lambda.cuda
 ```
 
-Of course, you will need to adapt variable *KOKKOS_ARCH* to your actual GPU architecture (use cuda sample device_query to probe the architecture).
+Of course, you will need to adapt variable **KOKKOS_ARCH** to your actual GPU architecture (use cuda sample device_query to probe the architecture).
 
-Depending on your OS, you may need to set variable *KOKKOS_CUDA_DIR* to point to your CUDA SDK (if cmake is not able to figure out by itself); e.g. /usr/local/cuda-9.0
+Depending on your OS, you may need to set variable **KOKKOS_CUDA_DIR** to point to your CUDA SDK (if cmake is not able to figure out by itself); e.g. /usr/local/cuda-9.0
