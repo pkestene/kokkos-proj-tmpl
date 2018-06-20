@@ -6,8 +6,12 @@ macro(build_exec name)
   # define executable name
   if (KOKKOS_ENABLE_CUDA)
     set(EXE_NAME "${name}.cuda")
-  else()
+  elseif(KOKKOS_ENABLE_OPENMP)
     set(EXE_NAME "${name}.openmp")
+  elseif(KOKKOS_ENABLE_PTHREAD)
+    set(EXE_NAME "${name}.pthread")
+  else()
+    set(EXE_NAME "${name}.serial")
   endif()
   
   # define list of source files
