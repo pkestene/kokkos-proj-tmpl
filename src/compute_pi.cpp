@@ -12,8 +12,13 @@
 
 #ifdef KOKKOS_ENABLE_CUDA
 #include "CudaTimer.h"
-#else
+using Timer = CudaTimer;
+#elif defined(KOKKOS_ENABLE_OPENMP)
 #include "OpenMPTimer.h"
+using Timer = OpenMPTimer;
+#else
+#include "SimpleTimer.h"
+using Timer = SimpleTimer;
 #endif
 
 /*
@@ -135,11 +140,7 @@ void compute_pi(int niter, int nrepeat) {
   RGPool_t pool(ticks);
 
   // Time computation
-#ifdef KOKKOS_ENABLE_CUDA
-  CudaTimer timer;
-#else
-  OpenMPTimer timer;
-#endif
+  Timer timer;
 
   timer.start();
   double pi = compute_pi_functor<RGPool_t>::apply(pool, niter, nrepeat);

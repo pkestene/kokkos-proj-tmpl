@@ -21,12 +21,18 @@ macro(build_exec name)
       ${EXE_NAME_SRC}
       CudaTimer.h
       )
-  else()
+  elseif (KOKKOS_ENABLE_OPENMP)
     set (EXE_NAME_SRC
       ${EXE_NAME_SRC}
       OpenMPTimer.h
       OpenMPTimer.cpp
-      )  
+      )
+  else()
+    set (EXE_NAME_SRC
+      ${EXE_NAME_SRC}
+      SimpleTimer.h
+      SimpleTimer.cpp
+      )
   endif()
   
   # define how to build and link

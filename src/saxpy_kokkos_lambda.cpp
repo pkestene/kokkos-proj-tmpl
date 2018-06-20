@@ -52,8 +52,13 @@
 
 #ifdef KOKKOS_ENABLE_CUDA
 #include "CudaTimer.h"
-#else
+using Timer = CudaTimer;
+#elif defined(KOKKOS_ENABLE_OPENMP)
 #include "OpenMPTimer.h"
+using Timer = OpenMPTimer;
+#else
+#include "SimpleTimer.h"
+using Timer = SimpleTimer;
 #endif
 
 // ===============================================================
@@ -73,11 +78,7 @@ void test_saxpy(int length, int nrepeat) {
   });
 
   // Time saxpy computation
-#ifdef KOKKOS_ENABLE_CUDA
-  CudaTimer timer;
-#else
-  OpenMPTimer timer;
-#endif
+  Timer timer;
 
   timer.start();
   for(int k = 0; k < nrepeat; k++) {
