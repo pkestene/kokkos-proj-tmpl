@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # sources
 #
 
-# first buid kokkos
+# first build kokkos
 add_subdirectory(external/kokkos)
 
 # pass Kokkos include directories to our target application
