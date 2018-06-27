@@ -59,7 +59,7 @@ struct compute_pi_functor {
   // which execution space ? OpenMP, Cuda, ...
   using device_t = typename GeneratorPool::device_type;
   
-  // a random genrator pool object
+  // a random generator pool object
   GeneratorPool rand_pool;
 
   int niter;
