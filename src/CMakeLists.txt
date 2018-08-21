@@ -53,6 +53,7 @@ endmacro(build_exec)
 ####################################################
 build_exec(saxpy_kokkos_lambda)
 build_exec(compute_pi)
+build_exec(deep_copy)
 
 
   
