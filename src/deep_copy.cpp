@@ -18,8 +18,9 @@ using Timer = OpenMPTimer;
 using Timer = SimpleTimer;
 #endif
 
-using ViewTypeSrc = Kokkos::View<double*>;
-using ViewTypeDst = Kokkos::View<double*>;
+using DataType = uint64_t;
+using ViewTypeSrc = Kokkos::View<DataType*,Kokkos::DefaultExecutionSpace>;
+using ViewTypeDst = Kokkos::View<DataType*,Kokkos::DefaultExecutionSpace>;
 
 // ===============================================================
 // ===============================================================
@@ -32,8 +33,8 @@ void test_deep_copy_functor(int length, int nrepeat) {
   
   // Initialize arrays
   Kokkos::parallel_for(length, KOKKOS_LAMBDA (const size_t& i) {
-    x(i) = 1.0;
-    y(i) = 1.0;
+    x(i) = 1;
+    y(i) = 1;
   });
 
   // Time computation
@@ -55,7 +56,7 @@ void test_deep_copy_functor(int length, int nrepeat) {
 
   printf("# DEEP COPY FUNCTOR ###############################################\n");
   printf("# VectorLength  Time(s) TimePerIterations(s)    size(MB)   BW(GB/s)\n");
-  printf(" %13i %8lf %20.3e  %10.2f %10.2f\n",length,time_seconds,time_seconds/nrepeat,1.0e-6*length*2*8,1.0e-9*length*2*nrepeat*8/time_seconds);
+  printf(" %13i %8lf %20.3e  %10.2f %10.2f\n",length,time_seconds,time_seconds/nrepeat,1.0e-6*length*2*sizeof(DataType),1.0e-9*length*2*nrepeat*sizeof(DataType)/time_seconds);
 
 } // test_deep_copy_functor
 
@@ -70,8 +71,8 @@ void test_deep_copy_api(int length, int nrepeat) {
   
   // Initialize arrays
   Kokkos::parallel_for(length, KOKKOS_LAMBDA (const size_t& i) {
-    x(i) = 1.0;
-    y(i) = 1.0;
+    x(i) = 1;
+    y(i) = 1;
   });
 
   // Time computation
@@ -84,6 +85,7 @@ void test_deep_copy_api(int length, int nrepeat) {
     Kokkos::deep_copy(y,x);
     
   }
+  //Kokkos::fence();
   timer.stop();
   
   // Print results
@@ -91,7 +93,7 @@ void test_deep_copy_api(int length, int nrepeat) {
 
   printf("# DEEP COPY API     ###############################################\n");
   printf("# VectorLength  Time(s) TimePerIterations(s)    size(MB)   BW(GB/s)\n");
-  printf(" %13i %8lf %20.3e  %10.2f %10.2f\n",length,time_seconds,time_seconds/nrepeat,1.0e-6*length*2*8,1.0e-9*length*2*nrepeat*8/time_seconds);
+  printf(" %13i %8lf %20.3e  %10.2f %10.2f\n",length,time_seconds,time_seconds/nrepeat,1.0e-6*length*2*sizeof(DataType),1.0e-9*length*2*nrepeat*sizeof(DataType)/time_seconds);
 
 } // test_deep_copy_api
 
