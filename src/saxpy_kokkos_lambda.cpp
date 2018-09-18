@@ -64,6 +64,28 @@ using Timer = SimpleTimer;
 // ===============================================================
 // ===============================================================
 // ===============================================================
+#ifdef KOKKOS_ENABLE_CUDA
+/**
+ * a simple saxpy CUDA kernel to illustrate kokkos/cuda interoperability
+ *
+ * \param[in,out] x input and outout array
+ * \param[in]     y input array
+ * \param[in]     n array size
+ */
+__global__ void cuda_saxpy( double *x, double *y, int n ) {
+
+  int i = threadIdx.x + blockIdx.x*blockDim.x;
+
+  const double a = 2.0;
+  
+  if (i<n)
+    x[i] = a*x[i] + y[i];
+}
+#endif // KOKKOS_ENABLE_CUDA
+
+// ===============================================================
+// ===============================================================
+// ===============================================================
 void test_saxpy(int length, int nrepeat) {
 
   // Allocate Views
@@ -97,6 +119,24 @@ void test_saxpy(int length, int nrepeat) {
   printf("#VectorLength  Time(s) TimePerIterations(s) size(MB) BW(GB/s)\n");
   printf("%13i %8lf %20.3e  %3.3f %3.3f\n",length,time_seconds,time_seconds/nrepeat,1.0e-6*length*3*8,1.0e-9*length*3*nrepeat*8/time_seconds);
 
+#ifdef KOKKOS_ENABLE_CUDA
+  printf("Same test with cuda kernel\n");
+  int blockSize = 256;
+  int nBlocks = length/blockSize;
+  timer.reset();
+  timer.start();
+  for(int k = 0; k < nrepeat; k++) {
+    cuda_saxpy<<<nBlocks,blockSize>>>(x.ptr_on_device(),
+				      y.ptr_on_device(),
+				      length);
+  }
+  timer.stop();
+  time_seconds = timer.elapsed();
+
+  printf("#VectorLength  Time(s) TimePerIterations(s) size(MB) BW(GB/s)\n");
+  printf("%13i %8lf %20.3e  %3.3f %3.3f\n",length,time_seconds,time_seconds/nrepeat,1.0e-6*length*3*8,1.0e-9*length*3*nrepeat*8/time_seconds);
+#endif // KOKKOS_ENABLE_CUDA
+  
 } // test_saxpy
 
 // ===============================================================
