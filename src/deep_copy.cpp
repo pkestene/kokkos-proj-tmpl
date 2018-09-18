@@ -83,6 +83,7 @@ void test_deep_copy_api(int length, int nrepeat) {
 
     // Do compute
     Kokkos::deep_copy(y,x);
+    //Kokkos::Impl::view_copy(y,x);
     
   }
   //Kokkos::fence();
