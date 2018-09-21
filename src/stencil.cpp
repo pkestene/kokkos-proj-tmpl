@@ -294,6 +294,23 @@ int main(int argc, char* argv[]) {
   //Initialize Kokkos
   Kokkos::initialize(argc,argv);
 
+  std::cout << "##########################\n";
+  std::cout << "KOKKOS CONFIG             \n";
+  std::cout << "##########################\n";
+  
+  std::ostringstream msg;
+  std::cout << "Kokkos configuration" << std::endl;
+  if ( Kokkos::hwloc::available() ) {
+    msg << "hwloc( NUMA[" << Kokkos::hwloc::get_available_numa_count()
+	<< "] x CORE["    << Kokkos::hwloc::get_available_cores_per_numa()
+	<< "] x HT["      << Kokkos::hwloc::get_available_threads_per_core()
+	<< "] )"
+	<< std::endl ;
+  }
+  Kokkos::print_configuration( msg );
+  std::cout << msg.str();
+  std::cout << "##########################\n";
+  
   // run test
   std::cout << "========================================\n";
   std::cout << "reference naive test using 1d flat range\n";
