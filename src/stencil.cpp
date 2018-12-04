@@ -131,6 +131,91 @@ void test_stencil_3d_flat(int n, int nrepeat) {
 // ===============================================================
 // ===============================================================
 // ===============================================================
+void test_stencil_3d_flat_vector(int n, int nrepeat) {
+
+  uint64_t nbCells = n*n*n;
+
+  uint64_t nbIter = n*n;
+  
+  // Allocate Views
+  DataArray x("X",n,n,n);
+  DataArray y("Y",n,n,n);
+  
+  // Initialize arrays
+  Kokkos::parallel_for(nbCells, KOKKOS_LAMBDA (const int& index) {
+      int i,j,k;
+      
+      index2coord(index,i,j,k,n,n,n);
+      
+      x(i,j,k) = 1.0*(i+j+k+0.1);
+      y(i,j,k) = 3.0*(i+j+k);
+    });
+
+  // Time saxpy computation
+  Timer timer;
+  
+  timer.start();
+  for(int k = 0; k < nrepeat; k++) {
+    
+    // Do stencil
+    Kokkos::parallel_for(nbIter, KOKKOS_LAMBDA (const int& index) {
+	int i,j;
+	//index2coord(index,i,j,k,n,n,n);
+
+	// index = j + n * i
+	i = index / n;
+	j = index - i*n;
+
+	auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
+	auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
+
+	auto x_im1_j = Kokkos::subview(x, i-1, j, Kokkos::ALL());
+	auto x_ip1_j = Kokkos::subview(x, i+1, j, Kokkos::ALL());
+
+	auto x_i_jm1 = Kokkos::subview(x, i, j-1, Kokkos::ALL());
+	auto x_i_jp1 = Kokkos::subview(x, i, j+1, Kokkos::ALL());
+
+	/*
+	 * subview's are important here. If you uncomment the following lines
+	 * you'll about 25% percent perfomance drop here.
+	 */
+	if (i>0 and i<n-1 and
+	    j>0 and j<n-1) {
+	  for (int k=1; k<n-1; ++k) {
+	    // y(i,j,k) = -5*x(i,j,k) +
+	    //   ( x(i-1,j,k) + x(i+1,j,k) +
+	    // 	x(i,j-1,k) + x(i,j+1,k) +
+	    // 	x(i,j,k-1) + x(i,j,k+1) );
+	    y_i_j(k) = -5*x_i_j(k) +
+	      ( x_im1_j(k) + x_ip1_j(k) +
+	    	x_i_jm1(k) + x_i_jp1(k) +
+	    	x_i_j(k-1) + x_i_j(k+1) );
+	  }
+	}
+	
+      });
+    
+  }
+  timer.stop();
+  
+  // Print results
+  double time_seconds = timer.elapsed();
+
+  // 6+1 reads + 1 write
+  double dataSizeMBytes = 1.0e-6*nbCells*sizeof(real_t)*(7+1);
+  double bandwidth = 1.0e-3*dataSizeMBytes*nrepeat/time_seconds;
+  
+  printf("#nbCells      Time(s)  TimePerIterations(s) size(MB) BW(GB/s)\n");
+  printf("%13lu %8lf %20.3e  %6.3f %3.3f\n",
+	 nbCells, time_seconds, time_seconds/nrepeat,
+	 dataSizeMBytes,bandwidth);
+
+  
+} // test_stencil_3d_flat_vector
+
+// ===============================================================
+// ===============================================================
+// ===============================================================
 void test_stencil_3d_range(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
@@ -315,6 +400,10 @@ int main(int argc, char* argv[]) {
   std::cout << "========================================\n";
   std::cout << "reference naive test using 1d flat range\n";
   test_stencil_3d_flat(n, nrepeat);
+
+  std::cout << "========================================\n";
+  std::cout << "reference naive test using 2d flat range and vectorization\n";
+  test_stencil_3d_flat_vector(n, nrepeat);
 
   std::cout << "========================================\n";
   std::cout << "reference naive test using 3d range\n";
