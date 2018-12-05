@@ -94,7 +94,7 @@ void test_stencil_3d_flat(int n, int nrepeat) {
   Timer timer;
   
   timer.start();
-  for(int k = 0; k < nrepeat; k++) {
+  for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
     
     // Do stencil
     Kokkos::parallel_for(nbCells, KOKKOS_LAMBDA (const int& index) {
@@ -155,7 +155,7 @@ void test_stencil_3d_flat_vector(int n, int nrepeat) {
   Timer timer;
   
   timer.start();
-  for(int k = 0; k < nrepeat; k++) {
+  for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
     
     // Do stencil
     Kokkos::parallel_for(nbIter, KOKKOS_LAMBDA (const int& index) {
@@ -248,7 +248,7 @@ void test_stencil_3d_range(int n, int nrepeat) {
   Timer timer;
   
   timer.start();
-  for(int k = 0; k < nrepeat; k++) {
+  for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
     
     // Do stencil
     Kokkos::parallel_for
@@ -314,7 +314,7 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
   Timer timer;
   
   timer.start();
-  for(int k = 0; k < nrepeat; k++) {
+  for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
     
     // Do stencil
     Kokkos::parallel_for
