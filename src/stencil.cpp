@@ -181,6 +181,11 @@ void test_stencil_3d_flat_vector(int n, int nrepeat) {
 	 */
 	if (i>0 and i<n-1 and
 	    j>0 and j<n-1) {
+
+	  // vectorization loop
+#if defined( __INTEL_COMPILER )
+#pragma ivdep
+#endif	
 	  for (int k=1; k<n-1; ++k) {
 	    // y(i,j,k) = -5*x(i,j,k) +
 	    //   ( x(i-1,j,k) + x(i+1,j,k) +
@@ -327,6 +332,11 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
 
 	if (i>0 and i<n-1 and
 	    j>0 and j<n-1) {
+
+	  // vectorization loop
+#if defined( __INTEL_COMPILER )
+#pragma ivdep
+#endif
 	  for (int k=1; k<n-1; ++k)
 	    y_i_j(k) = -5*x_i_j(k) +
 	      ( x_im1_j(k) + x_ip1_j(k) +
