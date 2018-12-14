@@ -14,6 +14,20 @@ KokkosStream<T>::KokkosStream(
 {
   Kokkos::initialize();
 
+  std::cout << "##########################\n";
+  std::ostringstream msg;
+  std::cout << "Kokkos configuration" << std::endl;
+  if ( Kokkos::hwloc::available() ) {
+    msg << "hwloc( NUMA[" << Kokkos::hwloc::get_available_numa_count()
+	<< "] x CORE["    << Kokkos::hwloc::get_available_cores_per_numa()
+	<< "] x HT["      << Kokkos::hwloc::get_available_threads_per_core()
+	<< "] )"
+	<< std::endl ;
+  }
+  Kokkos::print_configuration( msg );
+  std::cout << msg.str();
+  std::cout << "##########################\n";
+
   d_a = new Kokkos::View<T*>("d_a", ARRAY_SIZE);
   d_b = new Kokkos::View<T*>("d_b", ARRAY_SIZE);
   d_c = new Kokkos::View<T*>("d_c", ARRAY_SIZE);
