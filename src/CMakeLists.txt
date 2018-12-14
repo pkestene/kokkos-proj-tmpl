@@ -38,7 +38,16 @@ macro(build_exec name)
       SimpleTimer.cpp
       )
   endif()
-  
+
+  if (${name} STREQUAL KokkosStream_bench)
+    set (EXE_NAME_SRC
+      ${EXE_NAME_SRC}
+      Stream.h
+      KokkosStream.hpp
+      KokkosStream.cpp
+      )
+  endif()
+    
   # define how to build and link
   add_executable(${EXE_NAME}
     ${EXE_NAME_SRC})
@@ -55,7 +64,6 @@ build_exec(saxpy_kokkos_lambda)
 build_exec(compute_pi)
 build_exec(deep_copy)
 build_exec(stencil)
-
-
+build_exec(KokkosStream_bench)
   
 

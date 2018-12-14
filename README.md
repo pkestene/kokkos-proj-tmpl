@@ -39,3 +39,8 @@ make
 Of course, you will need to adapt variable **KOKKOS_ARCH** to your actual GPU architecture (use cuda sample device_query to probe the architecture).
 
 Depending on your OS, you may need to set variable **KOKKOS_CUDA_DIR** to point to your CUDA SDK (if cmake is not able to figure out by itself); e.g. /usr/local/cuda-9.0
+
+
+## Additional notes
+
+The stream benchmark source code is slightly adapted from [BabelStream](https://github.com/UoB-HPC/BabelStream).
