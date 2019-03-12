@@ -435,7 +435,7 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
  * - a ThreadVectorRange Kokkos::policy for the inner loop (to be vectorized)
  *
  */
-void test_stencil_3d_range_vector2(int n, int nrepeat) {
+void test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
 
   uint64_t nbCells = n*n*n;
   
@@ -473,24 +473,23 @@ void test_stencil_3d_range_vector2(int n, int nrepeat) {
     // Do stencil
     Kokkos::parallel_for
       ("stencil compute - 3d range vector",
-       Kokkos::TeamPolicy<> (512, Kokkos::AUTO),
+       Kokkos::TeamPolicy<> (nbTeams, Kokkos::AUTO),
        KOKKOS_LAMBDA (team_member_t team_member) {
-
-	// // get thread id
-	// const int thId =
-	//   team_member.team_rank() +
-	//   team_member.league_rank() * team_member.team_size();
 
 	int i = team_member.team_rank();
 	int j = team_member.league_rank();
 
 	int ni = (n+team_member.team_size()  -1)/team_member.team_size();
 	int nj = (n+team_member.league_size()-1)/team_member.league_size();
-
-	// make sure indexes (i,j) cover the full (nx,ny) range
-	for (int jj=0; jj<nj; ++jj, j+=team_member.league_size()) {
-	  for (int ii=0; ii<ni; ++ii, i+=team_member.team_size()) {
 	
+	// make sure indexes (i,j) cover the full (nx,ny) range
+	for (int jj=0, j=team_member.league_rank();
+	     jj<nj;
+	     ++jj, j+=team_member.league_size()) {
+	  for (int ii=0, i=team_member.team_rank();
+	       ii<ni;
+	       ++ii, i+=team_member.team_size()) {
+
 	    auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
 	    auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
 	    
@@ -503,15 +502,30 @@ void test_stencil_3d_range_vector2(int n, int nrepeat) {
 	    if (i>0 and i<n-1 and
 		j>0 and j<n-1) {
 
+	      // Kokkos::parallel_for
+	      // 	(Kokkos::ThreadVectorRange(team_member, 1, n-1),
+	      // 	 KOKKOS_LAMBDA(int& k) {
+
+	      // 	  y_i_j(k) = -5*x_i_j(k) +
+	      // 	  ( x_im1_j(k) + x_ip1_j(k) +
+	      // 	    x_i_jm1(k) + x_i_jp1(k) +
+	      // 	    x_i_j(k-1) + x_i_j(k+1) );
+		  
+	      // 	});
+	      
+	      // vectorization loop
+#if defined( __INTEL_COMPILER )
+#pragma ivdep
+#endif
 	      for (int k=1; k<n-1; ++k)
-		y_i_j(k) = -5*x_i_j(k) +
-		  ( x_im1_j(k) + x_ip1_j(k) +
-		    x_i_jm1(k) + x_i_jp1(k) +
-		    x_i_j(k-1) + x_i_j(k+1) );
-	      // y(i,j,k) = -5*x(i,j,k) +
-	      // 	( x(i-1,j,k) + x(i+1,j,k) +
-	      // 	  x(i,j-1,k) + x(i,j+1,k) +
-	      // 	  x(i,j,k-1) + x(i,j,k+1) );
+	      	y_i_j(k) = -5*x_i_j(k) +
+	      	  ( x_im1_j(k) + x_ip1_j(k) +
+	      	    x_i_jm1(k) + x_i_jp1(k) +
+	      	    x_i_j(k-1) + x_i_j(k+1) );
+		// y(i,j,k) = -5*x(i,j,k) +
+		//   ( x(i-1,j,k) + x(i+1,j,k) +
+		//     x(i,j-1,k) + x(i,j+1,k) +
+		//     x(i,j,k-1) + x(i,j,k+1) );
 	      
 	    }
 	  } // end for ii
@@ -543,15 +557,18 @@ void test_stencil_3d_range_vector2(int n, int nrepeat) {
 int main(int argc, char* argv[]) {
 
   // Parameters
-  int n = 256;        // 3d array linear size 
+  int n = 256;       // 3d array linear size 
   int nrepeat = 10;  // number of kernel invocations
-
+  int nteams = 64;   // default number of teams (for TeamPolicy)
+  
   // Read command line arguments
   for(int i=0; i<argc; i++) {
     if( strcmp(argv[i], "-n") == 0) {
       n = atoi(argv[++i]);
     } else if( strcmp(argv[i], "-nrepeat") == 0) {
       nrepeat = atoi(argv[++i]);
+    } else if( strcmp(argv[i], "-nteams") == 0) {
+      nteams = atoi(argv[++i]);      
     } else if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)) {
       printf("STENCIL 3D Options:\n");
       printf("  -n <int>:         3d linear size (default: 256)\n");
@@ -603,7 +620,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "========================================\n";
   std::cout << "reference naive test using 3d range and vectorization with team policy\n";
-  test_stencil_3d_range_vector2(n, nrepeat);
+  test_stencil_3d_range_vector2(n, nrepeat,nteams);
 
   // Shutdown Kokkos
   Kokkos::finalize();
