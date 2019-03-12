@@ -72,6 +72,11 @@ int coord2index(int i,  int j,  int k,
 // ===============================================================
 // ===============================================================
 // ===============================================================
+/**
+ * version 1 : naive
+ * - data is a 3d array
+ * - all loops parallelized with a single parallel_for
+ */
 void test_stencil_3d_flat(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
@@ -131,7 +136,19 @@ void test_stencil_3d_flat(int n, int nrepeat) {
 // ===============================================================
 // ===============================================================
 // ===============================================================
-void test_stencil_3d_flat_vector(int n, int nrepeat) {
+/**
+ * version 2:
+ * - data is a 3d array
+ * - only loops over i,j are parallelized, loop over k is kept inside
+ * - optionally, on can use 1D subview to access data, and help the compiler
+ *   to recognize a vectorizable loop
+ *
+ *
+ * subview's are important here. 
+ * Without 1d views, you'll have about 25% percent perfomance drop here.
+ *
+ */
+void test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
 
   uint64_t nbCells = n*n*n;
 
@@ -155,51 +172,86 @@ void test_stencil_3d_flat_vector(int n, int nrepeat) {
   Timer timer;
   
   timer.start();
-  for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
-    
-    // Do stencil
-    Kokkos::parallel_for(nbIter, KOKKOS_LAMBDA (const int& index) {
-	int i,j;
-	//index2coord(index,i,j,k,n,n,n);
 
-	// index = j + n * i
-	i = index / n;
-	j = index - i*n;
+  if (use_1d_views) {
 
-	auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
-	auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
-
-	auto x_im1_j = Kokkos::subview(x, i-1, j, Kokkos::ALL());
-	auto x_ip1_j = Kokkos::subview(x, i+1, j, Kokkos::ALL());
-
-	auto x_i_jm1 = Kokkos::subview(x, i, j-1, Kokkos::ALL());
-	auto x_i_jp1 = Kokkos::subview(x, i, j+1, Kokkos::ALL());
-
-	/*
-	 * subview's are important here. If you uncomment the following lines
-	 * you'll about 25% percent perfomance drop here.
-	 */
-	if (i>0 and i<n-1 and
-	    j>0 and j<n-1) {
-
-	  // vectorization loop
+    for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
+      
+      // Do stencil
+      Kokkos::parallel_for(nbIter, KOKKOS_LAMBDA (const int& index) {
+	  int i,j;
+	  //index2coord(index,i,j,k,n,n,n);
+	  
+	  // index = j + n * i
+	  i = index / n;
+	  j = index - i*n;
+	  
+	  auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
+	  auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
+	  
+	  auto x_im1_j = Kokkos::subview(x, i-1, j, Kokkos::ALL());
+	  auto x_ip1_j = Kokkos::subview(x, i+1, j, Kokkos::ALL());
+	  
+	  auto x_i_jm1 = Kokkos::subview(x, i, j-1, Kokkos::ALL());
+	  auto x_i_jp1 = Kokkos::subview(x, i, j+1, Kokkos::ALL());
+	  
+	  /*
+	   * subview's are important here. If you uncomment the following lines
+	   * you'll about 25% percent perfomance drop here.
+	   */
+	  if (i>0 and i<n-1 and
+	      j>0 and j<n-1) {
+	    
+	    // vectorization loop
 #if defined( __INTEL_COMPILER )
 #pragma ivdep
 #endif	
-	  for (int k=1; k<n-1; ++k) {
-	    // y(i,j,k) = -5*x(i,j,k) +
-	    //   ( x(i-1,j,k) + x(i+1,j,k) +
-	    // 	x(i,j-1,k) + x(i,j+1,k) +
-	    // 	x(i,j,k-1) + x(i,j,k+1) );
-	    y_i_j(k) = -5*x_i_j(k) +
-	      ( x_im1_j(k) + x_ip1_j(k) +
-	    	x_i_jm1(k) + x_i_jp1(k) +
-	    	x_i_j(k-1) + x_i_j(k+1) );
+	    for (int k=1; k<n-1; ++k) {
+	      // y(i,j,k) = -5*x(i,j,k) +
+	      //   ( x(i-1,j,k) + x(i+1,j,k) +
+	      // 	x(i,j-1,k) + x(i,j+1,k) +
+	      // 	x(i,j,k-1) + x(i,j,k+1) );
+	      y_i_j(k) = -5*x_i_j(k) +
+		( x_im1_j(k) + x_ip1_j(k) +
+		  x_i_jm1(k) + x_i_jp1(k) +
+		  x_i_j(k-1) + x_i_j(k+1) );
+	    }
 	  }
-	}
-	
-      });
+	  
+	});
+      
+    } // end repeat
+
+  } else { // don't use 1 d views
     
+    for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
+      
+      // Do stencil
+      Kokkos::parallel_for(nbIter, KOKKOS_LAMBDA (const int& index) {
+	  int i,j;
+	  //index2coord(index,i,j,k,n,n,n);
+	  
+	  // index = j + n * i
+	  i = index / n;
+	  j = index - i*n;	  
+	  
+	  if (i>0 and i<n-1 and
+	      j>0 and j<n-1) {
+	    
+	    // vectorization loop
+#if defined( __INTEL_COMPILER )
+#pragma ivdep
+#endif	
+	    for (int k=1; k<n-1; ++k) {
+	      y(i,j,k) = -5*x(i,j,k) +
+	        ( x(i-1,j,k) + x(i+1,j,k) +
+	      	x(i,j-1,k) + x(i,j+1,k) +
+	      	x(i,j,k-1) + x(i,j,k+1) );
+	    }
+	  }
+	  
+	});
+    } // end repeat
   }
   timer.stop();
   
@@ -252,9 +304,9 @@ void test_stencil_3d_range(int n, int nrepeat) {
     
     // Do stencil
     Kokkos::parallel_for
-      ("stencil compute", range, KOKKOS_LAMBDA (const int& i,
-						const int& j,
-						const int& k) {
+      ("stencil compute - 3d range", range, KOKKOS_LAMBDA (const int& i,
+							   const int& j,
+							   const int& k) {
 	if (i>0 and i<n-1 and
 	    j>0 and j<n-1 and
 	    k>0 and k<n-1 )
@@ -297,12 +349,12 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
   using Range2D = typename Kokkos::Experimental::MDRangePolicy< Kokkos::Experimental::Rank<2> >;
   using Range3D = typename Kokkos::Experimental::MDRangePolicy< Kokkos::Experimental::Rank<3> >;
 
-  Range2D range2( {{0,0}}, {{n,n}} );
-  Range3D range3( {{0,0,0}}, {{n,n,n}} );
+  Range2D range2d( {{0,0}}, {{n,n}} );
+  Range3D range3d( {{0,0,0}}, {{n,n,n}} );
 
   
   // Initialize arrays
-  Kokkos::parallel_for("init", range3,
+  Kokkos::parallel_for("init", range3d,
 		       KOKKOS_LAMBDA (const int& i,
 				      const int& j,
 				      const int& k) {      
@@ -318,8 +370,8 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
     
     // Do stencil
     Kokkos::parallel_for
-      ("stencil compute", range2, KOKKOS_LAMBDA (const int& i,
-						 const int& j) {
+      ("stencil compute - 3d range vector", range2d, KOKKOS_LAMBDA (const int& i,
+								    const int& j) {
 
 	auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
 	auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
@@ -369,7 +421,7 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
 int main(int argc, char* argv[]) {
 
   // Parameters
-  int n = 128;        // 3d array linear size 
+  int n = 256;        // 3d array linear size 
   int nrepeat = 10;  // number of kernel invocations
 
   // Read command line arguments
@@ -380,7 +432,7 @@ int main(int argc, char* argv[]) {
       nrepeat = atoi(argv[++i]);
     } else if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)) {
       printf("STENCIL 3D Options:\n");
-      printf("  -n <int>:         3d linear size (default: 128)\n");
+      printf("  -n <int>:         3d linear size (default: 256)\n");
       printf("  -nrepeat <int>:   number of integration invocations (default: 10)\n");
       printf("  -help (-h):       print this message\n");
     }
@@ -412,8 +464,12 @@ int main(int argc, char* argv[]) {
   test_stencil_3d_flat(n, nrepeat);
 
   std::cout << "========================================\n";
-  std::cout << "reference naive test using 2d flat range and vectorization\n";
-  test_stencil_3d_flat_vector(n, nrepeat);
+  std::cout << "reference naive test using 2d flat range and vectorization (no views)\n";
+  test_stencil_3d_flat_vector(n, nrepeat,false);
+
+  std::cout << "========================================\n";
+  std::cout << "reference naive test using 2d flat range and vectorization (with views)\n";
+  test_stencil_3d_flat_vector(n, nrepeat,true);
 
   std::cout << "========================================\n";
   std::cout << "reference naive test using 3d range\n";
