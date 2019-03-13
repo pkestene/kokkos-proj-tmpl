@@ -4,6 +4,7 @@
 #include<cstring>
 #include<sys/time.h>
 #include <vector>
+#include <fstream>      // std::ofstream
 
 // Include Kokkos Headers
 #include<Kokkos_Core.hpp>
@@ -77,8 +78,10 @@ int coord2index(int i,  int j,  int k,
  * version 1 : naive
  * - data is a 3d array
  * - all loops parallelized with a single parallel_for
+ *
+ * \return effective bandwidth
  */
-void test_stencil_3d_flat(int n, int nrepeat) {
+double test_stencil_3d_flat(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
   
@@ -131,6 +134,7 @@ void test_stencil_3d_flat(int n, int nrepeat) {
 	 nbCells, time_seconds, time_seconds/nrepeat,
 	 dataSizeMBytes,bandwidth);
 
+  return bandwidth;
   
 } // test_stencil_3d_flat
 
@@ -150,7 +154,7 @@ void test_stencil_3d_flat(int n, int nrepeat) {
  *
  * Use parameter use_1d_views to activate/deactivate the use of 1d views.
  */
-void test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
+double test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
 
   uint64_t nbCells = n*n*n;
 
@@ -269,6 +273,7 @@ void test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
 	 nbCells, time_seconds, time_seconds/nrepeat,
 	 dataSizeMBytes,bandwidth);
 
+  return bandwidth;
   
 } // test_stencil_3d_flat_vector
 
@@ -279,7 +284,7 @@ void test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
  * version 3 :
  * same as version 1 (naive) but uses a 3d range policy.
  */
-void test_stencil_3d_range(int n, int nrepeat) {
+double test_stencil_3d_range(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
   
@@ -337,6 +342,7 @@ void test_stencil_3d_range(int n, int nrepeat) {
 	 nbCells, time_seconds, time_seconds/nrepeat,
 	 dataSizeMBytes,bandwidth);
 
+  return bandwidth;
   
 } // test_stencil_3d_range
 
@@ -348,7 +354,7 @@ void test_stencil_3d_range(int n, int nrepeat) {
  * same as version 3 but uses a 2d Range policy and keep the loop over
  * index k inside kernel.
  */
-void test_stencil_3d_range_vector(int n, int nrepeat) {
+double test_stencil_3d_range_vector(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
   
@@ -423,6 +429,7 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
 	 nbCells, time_seconds, time_seconds/nrepeat,
 	 dataSizeMBytes,bandwidth);
 
+  return bandwidth;
   
 } // test_stencil_3d_range_vector
 
@@ -436,7 +443,7 @@ void test_stencil_3d_range_vector(int n, int nrepeat) {
  * - a ThreadVectorRange Kokkos::policy for the inner loop (to be vectorized)
  *
  */
-void test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
+double test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
 
   uint64_t nbCells = n*n*n;
   
@@ -549,6 +556,7 @@ void test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
 	 nbCells, time_seconds, time_seconds/nrepeat,
 	 dataSizeMBytes,bandwidth);
 
+  return bandwidth;
   
 } // test_stencil_3d_range_vector2
 
@@ -557,31 +565,92 @@ void test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
 void bench() {
   
   int nrepeat = 20;
-  std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 512, 768};
+  //std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 512, 768};
+  std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256};
+  //std::vector<int> size_list = {32, 48};
+  int size = size_list.size();
+
+  std::array<std::vector<double>,6> v;
+
+  std::vector<std::string> test_names = {
+    "# test_stencil_3d_flat",
+    "# test_stencil_3d_flat_vector without views",
+    "# test_stencil_3d_flat_vector with    views",
+    "# test_stencil_3d_range",
+    "# test_stencil_3d_range_vector",
+    "# test_stencil_3d_range_vector2"
+  };
   
-  printf("############################ test_stencil_3d_flat\n");
+  std::cout << "###########################" << test_names[0] << "\n";
   for (auto n : size_list)
-    test_stencil_3d_flat(n, nrepeat);
+    v[0].push_back(test_stencil_3d_flat(n, nrepeat));
+
+  std::cout << "###########################" << test_names[1] << "\n";
+  for (auto n : size_list)
+    v[1].push_back(test_stencil_3d_flat_vector(n, nrepeat,false));
   
-  printf("############################ test_stencil_3d_flat_vector without views\n");
+  std::cout << "###########################" << test_names[2] << "\n";
   for (auto n : size_list)
-    test_stencil_3d_flat_vector(n, nrepeat,false);
+    v[2].push_back(test_stencil_3d_flat_vector(n, nrepeat,true));
   
-  printf("############################ test_stencil_3d_flat_vector with    views\n");
+  std::cout << "###########################" << test_names[3] << "\n";
   for (auto n : size_list)
-    test_stencil_3d_flat_vector(n, nrepeat,true);
+    v[3].push_back(test_stencil_3d_range(n, nrepeat));
   
-  printf("############################ test_stencil_3d_range\n");
+  std::cout << "###########################" << test_names[4] << "\n";
   for (auto n : size_list)
-    test_stencil_3d_range(n, nrepeat);
+    v[4].push_back(test_stencil_3d_range_vector(n, nrepeat));
   
-  printf("############################ test_stencil_3d_range_vector\n");
+  std::cout << "###########################" << test_names[5] << "\n";
   for (auto n : size_list)
-    test_stencil_3d_range_vector(n, nrepeat);
+    v[5].push_back(test_stencil_3d_range_vector2(n, nrepeat, 32));
+
+  /*
+   * create python script for plotting results
+   */
+  std::ofstream ofs ("plot_stencil_perf.py", std::ofstream::out);
+
+  ofs << "import numpy as np\n";
+  ofs << "import matplotlib.pyplot as plt\n";
+  ofs << "from matplotlib import rc\n";
+  ofs << "#rc('text', usetex=True)\n\n";
+
+  // output size array
+  ofs << "size=np.array([";
+  for (int i=0; i<size; ++i)
+    i<size-1 ? ofs << size_list[i] << "," : ofs << size_list[i];
+  ofs << "])\n\n";
+    
+  // output bandwidth data
+  for (int iv=0; iv<6; ++iv) {
+
+    ofs << test_names[iv] << "\n";
+    ofs << "v" << iv << "=np.array([";
+    for (int i=0; i<size; ++i)
+      i<size-1 ? ofs << v[iv][i] << "," : ofs << v[iv][i];
+    ofs << "])\n\n";
+    
+  }
+
   
-  printf("############################ test_stencil_3d_range_vector2\n");
-  for (auto n : size_list)
-    test_stencil_3d_range_vector2(n, nrepeat,32);
+  ofs << "plt.plot(size,v0, label='"<<test_names[0]<<"')\n";
+  ofs << "plt.plot(size,v1, label='"<<test_names[1]<<"')\n";
+  ofs << "plt.plot(size,v2, label='"<<test_names[2]<<"')\n";
+  ofs << "plt.plot(size,v3, label='"<<test_names[3]<<"')\n";
+  ofs << "plt.plot(size,v4, label='"<<test_names[4]<<"')\n";
+  ofs << "plt.plot(size,v5, label='"<<test_names[5]<<"')\n";
+
+  ofs << "plt.grid(True)\n";
+
+  // ofs << "plt.title('3d Heat kernel performance on Skylake (1 socket, irene)')\n"
+  ofs << "plt.title('3d Heat kernel performance')\n";
+  ofs << "plt.xlabel('N - linear size')\n";
+  ofs << "plt.ylabel(r'Bandwidth (GBytes/s)')\n";
+  
+  ofs << "plt.legend()\n";
+  ofs << "plt.show()\n";
+  
+  ofs.close();
   
 } // bench
 
