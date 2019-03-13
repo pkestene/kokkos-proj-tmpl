@@ -574,6 +574,7 @@ int main(int argc, char* argv[]) {
       printf("  -n <int>:         3d linear size (default: 256)\n");
       printf("  -nrepeat <int>:   number of integration invocations (default: 10)\n");
       printf("  -help (-h):       print this message\n");
+      return EXIT_SUCCESS;
     }
   }
   
@@ -624,4 +625,6 @@ int main(int argc, char* argv[]) {
 
   // Shutdown Kokkos
   Kokkos::finalize();
+  
+  return EXIT_SUCCESS;
 }
