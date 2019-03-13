@@ -3,6 +3,7 @@
 #include<cstdlib>
 #include<cstring>
 #include<sys/time.h>
+#include <vector>
 
 // Include Kokkos Headers
 #include<Kokkos_Core.hpp>
@@ -553,6 +554,39 @@ void test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
 
 // ===============================================================
 // ===============================================================
+void bench() {
+  
+  int nrepeat = 20;
+  std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 512, 768};
+  
+  printf("############################ test_stencil_3d_flat\n");
+  for (auto n : size_list)
+    test_stencil_3d_flat(n, nrepeat);
+  
+  printf("############################ test_stencil_3d_flat_vector without views\n");
+  for (auto n : size_list)
+    test_stencil_3d_flat_vector(n, nrepeat,false);
+  
+  printf("############################ test_stencil_3d_flat_vector with    views\n");
+  for (auto n : size_list)
+    test_stencil_3d_flat_vector(n, nrepeat,true);
+  
+  printf("############################ test_stencil_3d_range\n");
+  for (auto n : size_list)
+    test_stencil_3d_range(n, nrepeat);
+  
+  printf("############################ test_stencil_3d_range_vector\n");
+  for (auto n : size_list)
+    test_stencil_3d_range_vector(n, nrepeat);
+  
+  printf("############################ test_stencil_3d_range_vector2\n");
+  for (auto n : size_list)
+    test_stencil_3d_range_vector2(n, nrepeat,32);
+  
+} // bench
+
+// ===============================================================
+// ===============================================================
 // ===============================================================
 int main(int argc, char* argv[]) {
 
@@ -560,6 +594,7 @@ int main(int argc, char* argv[]) {
   int n = 256;       // 3d array linear size 
   int nrepeat = 10;  // number of kernel invocations
   int nteams = 64;   // default number of teams (for TeamPolicy)
+  bool bench_enabled = false; // run bench instead
   
   // Read command line arguments
   for(int i=0; i<argc; i++) {
@@ -568,11 +603,14 @@ int main(int argc, char* argv[]) {
     } else if( strcmp(argv[i], "-nrepeat") == 0) {
       nrepeat = atoi(argv[++i]);
     } else if( strcmp(argv[i], "-nteams") == 0) {
-      nteams = atoi(argv[++i]);      
+      nteams = atoi(argv[++i]);
+    } else if( strcmp(argv[i], "-b") == 0) {
+      bench_enabled = true;
     } else if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)) {
       printf("STENCIL 3D Options:\n");
       printf("  -n <int>:         3d linear size (default: 256)\n");
       printf("  -nrepeat <int>:   number of integration invocations (default: 10)\n");
+      printf("  -b :              run full benchmark\n");
       printf("  -help (-h):       print this message\n");
       return EXIT_SUCCESS;
     }
@@ -598,31 +636,38 @@ int main(int argc, char* argv[]) {
   std::cout << msg.str();
   std::cout << "##########################\n";
   
-  // run test
-  std::cout << "========================================\n";
-  std::cout << "reference naive test using 1d flat range\n";
-  test_stencil_3d_flat(n, nrepeat);
+  if (bench_enabled) {
 
-  std::cout << "========================================\n";
-  std::cout << "reference naive test using 2d flat range and vectorization (no views)\n";
-  test_stencil_3d_flat_vector(n, nrepeat,false);
+    bench();
 
-  std::cout << "========================================\n";
-  std::cout << "reference naive test using 2d flat range and vectorization (with views)\n";
-  test_stencil_3d_flat_vector(n, nrepeat,true);
+  } else {
 
-  std::cout << "========================================\n";
-  std::cout << "reference naive test using 3d range\n";
-  test_stencil_3d_range(n, nrepeat);
-
-  std::cout << "========================================\n";
-  std::cout << "reference naive test using 3d range and vectorization\n";
-  test_stencil_3d_range_vector(n, nrepeat);
-
-  std::cout << "========================================\n";
-  std::cout << "reference naive test using 3d range and vectorization with team policy\n";
-  test_stencil_3d_range_vector2(n, nrepeat,nteams);
-
+    // run test
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 1d flat range\n";
+    test_stencil_3d_flat(n, nrepeat);
+    
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 2d flat range and vectorization (no views)\n";
+    test_stencil_3d_flat_vector(n, nrepeat,false);
+    
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 2d flat range and vectorization (with views)\n";
+    test_stencil_3d_flat_vector(n, nrepeat,true);
+    
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 3d range\n";
+    test_stencil_3d_range(n, nrepeat);
+    
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 3d range and vectorization\n";
+    test_stencil_3d_range_vector(n, nrepeat);
+    
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 3d range and vectorization with team policy\n";
+    test_stencil_3d_range_vector2(n, nrepeat,nteams);
+  }
+  
   // Shutdown Kokkos
   Kokkos::finalize();
   
