@@ -38,6 +38,23 @@ using DataArray = Kokkos::View<real_t***, Device>;
 // ===============================================================
 KOKKOS_INLINE_FUNCTION
 void index2coord(int index,
+                 int &i, int &j,
+                 int Nx, int Ny)
+{
+  UNUSED(Nx);
+#ifdef KOKKOS_ENABLE_CUDA
+  j = index / Nx;
+  i = index - j*Nx;
+#else
+  i = index / Ny;
+  j = index - i*Ny;
+#endif
+} // index2coord - 2d
+
+// ===============================================================
+// ===============================================================
+KOKKOS_INLINE_FUNCTION
+void index2coord(int index,
                  int &i, int &j, int &k,
                  int Nx, int Ny, int Nz)
 {
@@ -54,7 +71,7 @@ void index2coord(int index,
   j = (index - i*NyNz) / Nz;
   k = index - j*Nz - i*NyNz;
 #endif
-}
+} // index2coord - 3d
 
 // ===============================================================
 // ===============================================================
@@ -186,11 +203,10 @@ double test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
       // Do stencil
       Kokkos::parallel_for(nbIter, KOKKOS_LAMBDA (const int& index) {
 	  int i,j;
-	  //index2coord(index,i,j,k,n,n,n);
 	  
-	  // index = j + n * i
-	  i = index / n;
-	  j = index - i*n;
+	  // index = j + n * i -- CPU
+	  // index = i + n * j -- GPU
+	  index2coord(index,i,j,n,n);
 	  
 	  auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
 	  auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
@@ -237,9 +253,9 @@ double test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
 	  int i,j;
 	  //index2coord(index,i,j,k,n,n,n);
 	  
-	  // index = j + n * i
-	  i = index / n;
-	  j = index - i*n;	  
+	  // index = j + n * i -- CPU
+	  // index = i + n * j -- GPU
+	  index2coord(index,i,j,n,n);
 	  
 	  if (i>0 and i<n-1 and
 	      j>0 and j<n-1) {
