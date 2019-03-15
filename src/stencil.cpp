@@ -1,3 +1,14 @@
+/**
+ * stencil kernel: 7 points
+ *
+ * Please note we measure performance using an effective metric:
+ * number of read/write operations which involve a memory transaction
+ * without (as much as possible) re-using cached data.
+ *
+ * Here we chose to count all neighbors memory access, deliberately knowing
+ * that we over-estimate the actual bandwidth.
+ */
+
 #include<cmath>
 #include<cstdio>
 #include<cstdlib>
