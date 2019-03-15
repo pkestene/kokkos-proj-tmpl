@@ -578,10 +578,9 @@ double test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
 
 // ===============================================================
 // ===============================================================
-void bench() {
+void bench(int nrepeat) {
   
-  int nrepeat = 20;
-  //std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 512, 768};
+  //std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 448, 512, 640, 768};
   std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256};
   //std::vector<int> size_list = {32, 48};
   int size = size_list.size();
@@ -723,7 +722,7 @@ int main(int argc, char* argv[]) {
   
   if (bench_enabled) {
 
-    bench();
+    bench(nrepeat);
 
   } else {
 
