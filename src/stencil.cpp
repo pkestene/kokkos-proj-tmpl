@@ -221,9 +221,30 @@ double test_stencil_3d_flat_1d_array(int n, int nrepeat) {
 	int i,j;
 	index2coord(index,i,j,n,n);
 
+	int dx = n*n;
+	int dy = n;
+	int dz = 1;
+
 	if (i>0 and i<n-1 and
 	    j>0 and j<n-1 )
+
+#if defined( __INTEL_COMPILER )
+#pragma ivdep
+#pragma omp simd
+#endif	
           for (int k=1; k<n-1; ++k) {
+
+	    // int index = k + n*j + n*n*i;
+	    
+            // y(index) = -5*x(index) +
+            //   ( x(index-dx) + x(index+dx) +
+            //     x(index-dy) + x(index+dy) +
+            //     x(index-dz) + x(index+dz) ); 
+
+            // y(k+n*j+n*n*i) = -5*x(k+n*j+n*n*i) +
+            //   ( x(k+n*j+n*n*(i-1)) + x(k+n*j+n*n*(i+1)) +
+            //     x(k+n*(j-1)+n*n*i) + x(k+n*(j+1)+n*n*i) +
+            //     x(k+1+n*j+n*n*i)   + x(k-1+n*j+n*n*i) ); 
 
             y(INDEX(i,j,k,n,n,n)) = -5*x(INDEX(i,j,k,n,n,n)) +
               ( x(INDEX(i-1,j,k,n,n,n)) + x(INDEX(i+1,j,k,n,n,n)) +
