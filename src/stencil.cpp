@@ -44,6 +44,7 @@ using Timer = SimpleTimer;
 
 using Device = Kokkos::DefaultExecutionSpace;
 using DataArray = Kokkos::View<real_t***, Device>;
+using DataArray1d = Kokkos::View<real_t*, Device>;
 
 // ===============================================================
 // ===============================================================
@@ -87,8 +88,8 @@ void index2coord(int index,
 // ===============================================================
 // ===============================================================
 KOKKOS_INLINE_FUNCTION
-int coord2index(int i,  int j,  int k,
-                int Nx, int Ny, int Nz)
+int INDEX(int i,  int j,  int k,
+          int Nx, int Ny, int Nz)
 {
   UNUSED(Nx);
   UNUSED(Nz);
@@ -97,7 +98,21 @@ int coord2index(int i,  int j,  int k,
 #else
   return k + Nz*j + Nz*Ny*i; // right layout
 #endif
-}
+} // INDEX
+
+// ===============================================================
+// ===============================================================
+KOKKOS_INLINE_FUNCTION
+int INDEX(int i,  int j,
+          int Nx, int Ny)
+{
+  UNUSED(Nx);
+#ifdef KOKKOS_ENABLE_CUDA
+  return i + Nx*j; // left layout
+#else
+  return j + Ny*i; // right layout
+#endif
+} // INDEX
 
 // ===============================================================
 // ===============================================================
@@ -165,6 +180,76 @@ double test_stencil_3d_flat(int n, int nrepeat) {
   return bandwidth;
   
 } // test_stencil_3d_flat
+
+// ===============================================================
+// ===============================================================
+// ===============================================================
+/**
+ * version 1bis : naive
+ * - data is a 1d array
+ * - all loops parallelized with a single parallel_for
+ *
+ * \return effective bandwidth
+ */
+double test_stencil_3d_flat_1d_array(int n, int nrepeat) {
+
+  uint64_t nbCells = n*n*n;
+  uint64_t nbCellsXY = n*n;
+  
+  // Allocate Views
+  DataArray1d x("X",nbCells);
+  DataArray1d y("Y",nbCells);
+  
+  // Initialize arrays
+  Kokkos::parallel_for(nbCells, KOKKOS_LAMBDA (const int& index) {
+      int i,j,k;
+      
+      index2coord(index,i,j,k,n,n,n);
+      
+      x(index) = 1.0*(i+j+k+0.1);
+      y(index) = 3.0*(i+j+k);
+    });
+
+  // Time computation
+  Timer timer;
+  
+  timer.start();
+  for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
+    
+    // Do stencil
+    Kokkos::parallel_for(nbCellsXY, KOKKOS_LAMBDA (const int& index) {
+	int i,j;
+	index2coord(index,i,j,n,n);
+
+	if (i>0 and i<n-1 and
+	    j>0 and j<n-1 )
+          for (int k=1; k<n-1; ++k) {
+
+            y(INDEX(i,j,k,n,n,n)) = -5*x(INDEX(i,j,k,n,n,n)) +
+              ( x(INDEX(i-1,j,k,n,n,n)) + x(INDEX(i+1,j,k,n,n,n)) +
+                x(INDEX(i,j-1,k,n,n,n)) + x(INDEX(i,j+1,k,n,n,n)) +
+                x(INDEX(i,j,k-1,n,n,n)) + x(INDEX(i,j,k+1,n,n,n)) ); 
+          }
+      });
+    
+  }
+  timer.stop();
+  
+  // Print results
+  double time_seconds = timer.elapsed();
+
+  // 6+1 reads + 1 write
+  double dataSizeMBytes = 1.0e-6*nbCells*sizeof(real_t)*(7+1);
+  double bandwidth = 1.0e-3*dataSizeMBytes*nrepeat/time_seconds;
+  
+  printf("#nbCells      Time(s)  TimePerIterations(s) size(MB) BW(GB/s)\n");
+  printf("%13lu %8lf %20.3e  %6.3f %3.3f\n",
+	 nbCells, time_seconds, time_seconds/nrepeat,
+	 dataSizeMBytes,bandwidth);
+
+  return bandwidth;
+  
+} // test_stencil_3d_flat_1d_array
 
 // ===============================================================
 // ===============================================================
@@ -278,8 +363,8 @@ double test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
 	    for (int k=1; k<n-1; ++k) {
 	      y(i,j,k) = -5*x(i,j,k) +
 	        ( x(i-1,j,k) + x(i+1,j,k) +
-	      	x(i,j-1,k) + x(i,j+1,k) +
-	      	x(i,j,k-1) + x(i,j,k+1) );
+                  x(i,j-1,k) + x(i,j+1,k) +
+                  x(i,j,k-1) + x(i,j,k+1) );
 	    }
 	  }
 	  
@@ -591,15 +676,18 @@ double test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
 // ===============================================================
 void bench(int nrepeat) {
   
+  constexpr int nbTests = 7;
+  
   //std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 448, 512, 640, 768};
   std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256};
   //std::vector<int> size_list = {32, 48};
   int size = size_list.size();
 
-  std::array<std::vector<double>,6> v;
+  std::array<std::vector<double>,nbTests> v;
 
   std::vector<std::string> test_names = {
     "# test_stencil_3d_flat",
+    "# test_stencil_3d_flat_1d_array",
     "# test_stencil_3d_flat_vector without views",
     "# test_stencil_3d_flat_vector with    views",
     "# test_stencil_3d_range",
@@ -613,23 +701,27 @@ void bench(int nrepeat) {
 
   std::cout << "###########################" << test_names[1] << "\n";
   for (auto n : size_list)
-    v[1].push_back(test_stencil_3d_flat_vector(n, nrepeat,false));
-  
+    v[1].push_back(test_stencil_3d_flat_1d_array(n, nrepeat));
+
   std::cout << "###########################" << test_names[2] << "\n";
   for (auto n : size_list)
-    v[2].push_back(test_stencil_3d_flat_vector(n, nrepeat,true));
+    v[2].push_back(test_stencil_3d_flat_vector(n, nrepeat,false));
   
   std::cout << "###########################" << test_names[3] << "\n";
   for (auto n : size_list)
-    v[3].push_back(test_stencil_3d_range(n, nrepeat));
+    v[3].push_back(test_stencil_3d_flat_vector(n, nrepeat,true));
   
   std::cout << "###########################" << test_names[4] << "\n";
   for (auto n : size_list)
-    v[4].push_back(test_stencil_3d_range_vector(n, nrepeat));
+    v[4].push_back(test_stencil_3d_range(n, nrepeat));
   
   std::cout << "###########################" << test_names[5] << "\n";
   for (auto n : size_list)
-    v[5].push_back(test_stencil_3d_range_vector2(n, nrepeat, 32));
+    v[5].push_back(test_stencil_3d_range_vector(n, nrepeat));
+  
+  std::cout << "###########################" << test_names[6] << "\n";
+  for (auto n : size_list)
+    v[6].push_back(test_stencil_3d_range_vector2(n, nrepeat, 32));
 
   /*
    * create python script for plotting results
@@ -648,7 +740,7 @@ void bench(int nrepeat) {
   ofs << "])\n\n";
     
   // output bandwidth data
-  for (int iv=0; iv<6; ++iv) {
+  for (int iv=0; iv<nbTests; ++iv) {
 
     ofs << test_names[iv] << "\n";
     ofs << "v" << iv << "=np.array([";
@@ -665,6 +757,7 @@ void bench(int nrepeat) {
   ofs << "plt.plot(size,v3, label='"<<test_names[3]<<"')\n";
   ofs << "plt.plot(size,v4, label='"<<test_names[4]<<"')\n";
   ofs << "plt.plot(size,v5, label='"<<test_names[5]<<"')\n";
+  ofs << "plt.plot(size,v6, label='"<<test_names[6]<<"')\n";
 
   ofs << "plt.grid(True)\n";
 
@@ -741,6 +834,10 @@ int main(int argc, char* argv[]) {
     std::cout << "========================================\n";
     std::cout << "reference naive test using 1d flat range\n";
     test_stencil_3d_flat(n, nrepeat);
+    
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 1d flat range 1d array\n";
+    test_stencil_3d_flat_1d_array(n, nrepeat);
     
     std::cout << "========================================\n";
     std::cout << "reference naive test using 2d flat range and vectorization (no views)\n";
