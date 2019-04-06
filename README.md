@@ -43,4 +43,12 @@ Depending on your OS, you may need to set variable **KOKKOS_CUDA_DIR** to point 
 
 ## Additional notes
 
+### Stream benchmark
+
 The stream benchmark source code is slightly adapted from [BabelStream](https://github.com/UoB-HPC/BabelStream).
+
+### Stencil benchmark
+
+Here are the results obtained on different computing platforms:
+
+![stencil bench skylake icpc](https://github.com/pkestene/kokkos-proj-tmpl/raw/master/doc/stencil/stencil_bench_alfven_skylake_icpc.png "Skylake (2x20 cores, Intel Xeon Gold 5115, icpc 2018.0.128)")
