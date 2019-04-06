@@ -785,7 +785,7 @@ void bench(int nrepeat) {
   ofs << "plt.grid(True)\n";
 
   // ofs << "plt.title('3d Heat kernel performance on Skylake (1 socket, irene)')\n"
-  ofs << "plt.title('3d Heat kernel performance')\n";
+  ofs << "plt.title('3d 7 points stencil kernel performance')\n";
   ofs << "plt.xlabel('N - linear size')\n";
   ofs << "plt.ylabel(r'Bandwidth (GBytes/s)')\n";
   
