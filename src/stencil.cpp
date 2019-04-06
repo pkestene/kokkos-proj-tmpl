@@ -207,8 +207,10 @@ double test_stencil_3d_flat(int n, int nrepeat) {
 // ===============================================================
 /**
  * version 1bis : naive
- * - data is a 1d array
- * - all loops parallelized with a single parallel_for
+ * - data is a 1d array, mapping between (i,j,k) and memory address is
+ *   handled at application level.
+ * - all loops parallelized with a single parallel_for with 1d range 
+ *   policy
  *
  * \return effective bandwidth
  */
@@ -300,8 +302,8 @@ double test_stencil_3d_flat_1d_array(int n, int nrepeat) {
  * version 2:
  * - data is a 3d array
  * - only loops over i,j are parallelized, loop over k is kept inside
- * - optionally, on can use 1D subview to access data, and help the compiler
- *   to recognize a vectorizable loop
+ * - optionally, on can use 1D subview to access data, and help the 
+ *   compiler to recognize a vectorizable loop
  *
  *
  * subview's are important here. 
@@ -506,7 +508,7 @@ double test_stencil_3d_range(int n, int nrepeat) {
 /**
  * version 4 :
  * same as version 3 but uses a 2d Range policy and keep the loop over
- * index k inside kernel.
+ * index k inside kernel for CPU vectorization.
  */
 double test_stencil_3d_range_vector(int n, int nrepeat) {
 
@@ -594,10 +596,15 @@ double test_stencil_3d_range_vector(int n, int nrepeat) {
  * version 5 :
  * same as version 4 but uses Hierarchical parallelism, i.e.
  * - a TeamPolicy        Kokkos::policy for the outer loop 
- * - a ThreadVectorRange Kokkos::policy for the inner loop (to be vectorized)
+ * - a TeamThreadRange   Kokkos::policy to divide middle loop over threads
+ * - a ThreadVectorRange Kokkos::policy for the inner loop (for CPU vectorization or GPU warp parallelism)
+ *
+ * Note that this is the only test with 3d views and Kokkos::LayoutRight
+ * for all devices. We try to optimize by ensuring the inner loop will
+ * use contiguous memory data.
  *
  */
-double test_stencil_3d_range_vector2(int n, int nrepeat) {
+double test_stencil_3d_range_hierarchical(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
   
@@ -693,7 +700,7 @@ double test_stencil_3d_range_vector2(int n, int nrepeat) {
 
   return bandwidth;
   
-} // test_stencil_3d_range_vector2
+} // test_stencil_3d_range_hierarchical
 
 // ===============================================================
 // ===============================================================
@@ -737,7 +744,7 @@ void bench(int nrepeat, bench_type bt) {
     "# test_stencil_3d_flat_vector with    views",
     "# test_stencil_3d_range",
     "# test_stencil_3d_range_vector",
-    "# test_stencil_3d_range_vector2"
+    "# test_stencil_3d_range_hierarchical"
   };
   
   std::cout << "###########################" << test_names[0] << "\n";
@@ -766,7 +773,7 @@ void bench(int nrepeat, bench_type bt) {
   
   std::cout << "###########################" << test_names[6] << "\n";
   for (auto n : size_list)
-    v[6].push_back(test_stencil_3d_range_vector2(n, nrepeat));
+    v[6].push_back(test_stencil_3d_range_hierarchical(n, nrepeat));
 
   /*
    * create python script for plotting results
@@ -915,7 +922,7 @@ int main(int argc, char* argv[]) {
     
     std::cout << "========================================\n";
     std::cout << "reference naive test using 3d range and vectorization with team policy\n";
-    test_stencil_3d_range_vector2(n, nrepeat);
+    test_stencil_3d_range_hierarchical(n, nrepeat);
   }
   
   // Shutdown Kokkos
