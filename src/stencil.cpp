@@ -576,7 +576,7 @@ double test_stencil_3d_range_vector(int n, int nrepeat) {
  * - a ThreadVectorRange Kokkos::policy for the inner loop (to be vectorized)
  *
  */
-double test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
+double test_stencil_3d_range_vector2(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
   
@@ -591,7 +591,8 @@ double test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
   Range2D range2d( {{0,0}}, {{n,n}} );
   Range3D range3d( {{0,0,0}}, {{n,n,n}} );
 
-  
+  int nbTeams = n*n;
+
   // Initialize arrays using a 3d range policy
   Kokkos::parallel_for("init", range3d,
 		       KOKKOS_LAMBDA (const int& i,
@@ -612,68 +613,46 @@ double test_stencil_3d_range_vector2(int n, int nrepeat, int nbTeams) {
   for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
     
     // Do stencil
-    Kokkos::parallel_for
-      ("stencil compute - 3d range vector",
-       Kokkos::TeamPolicy<> (nbTeams, Kokkos::AUTO),
-       KOKKOS_LAMBDA (team_member_t team_member) {
+    Kokkos::parallel_for(
+        "stencil compute - team policy and thread vector range",
+        Kokkos::TeamPolicy<>(nbTeams, Kokkos::AUTO),
+        KOKKOS_LAMBDA(team_member_t team_member) {
+          int lr = team_member.league_rank();
 
-	int i = team_member.team_rank();
-	int j = team_member.league_rank();
+          //int j = lr / n + 1;
+          //int i = lr % n + 1;
+          int i = lr / n + 1;
+          int j = lr % n + 1;
 
-	int ni = (n+team_member.team_size()  -1)/team_member.team_size();
-	int nj = (n+team_member.league_size()-1)/team_member.league_size();
-	
-	// make sure indexes (i,j) cover the full (nx,ny) range
-	for (int jj=0, j=team_member.league_rank();
-	     jj<nj;
-	     ++jj, j+=team_member.league_size()) {
-	  for (int ii=0, i=team_member.team_rank();
-	       ii<ni;
-	       ++ii, i+=team_member.team_size()) {
+          // auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
+          // auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
+          
+          // auto x_im1_j = Kokkos::subview(x, i-1, j, Kokkos::ALL());
+          // auto x_ip1_j = Kokkos::subview(x, i+1, j, Kokkos::ALL());
+          
+          // auto x_i_jm1 = Kokkos::subview(x, i, j-1, Kokkos::ALL());
+          // auto x_i_jp1 = Kokkos::subview(x, i, j+1, Kokkos::ALL());
 
-	    auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
-	    auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
-	    
-	    auto x_im1_j = Kokkos::subview(x, i-1, j, Kokkos::ALL());
-	    auto x_ip1_j = Kokkos::subview(x, i+1, j, Kokkos::ALL());
-	    
-	    auto x_i_jm1 = Kokkos::subview(x, i, j-1, Kokkos::ALL());
-	    auto x_i_jp1 = Kokkos::subview(x, i, j+1, Kokkos::ALL());
-	    
-	    if (i>0 and i<n-1 and
-		j>0 and j<n-1) {
+          if (i>0 and i<n-1 and
+              j>0 and j<n-1) {
 
-	      // Kokkos::parallel_for
-	      // 	(Kokkos::ThreadVectorRange(team_member, 1, n-1),
-	      // 	 KOKKOS_LAMBDA(int& k) {
+            Kokkos::parallel_for(
+              Kokkos::ThreadVectorRange(team_member, 1, n - 1),
+              KOKKOS_LAMBDA(int &k) {
+                y(i,j,k) = -5 * x(i,j,k) +
+                  (x(i-1,j,k) + x(i+1,j,k) + 
+                   x(i,j-1,k) + x(i,j+1,k) +
+                   x(i,j,k-1) + x(i,j,k+1));
+                // y_i_j(k) = -5*x_i_j(k) +
+                //   ( x_im1_j(k) + x_ip1_j(k) +
+                //     x_i_jm1(k) + x_i_jp1(k) +
+                //     x_i_j(k-1) + x_i_j(k+1) );
+                    
+              });
 
-	      // 	  y_i_j(k) = -5*x_i_j(k) +
-	      // 	  ( x_im1_j(k) + x_ip1_j(k) +
-	      // 	    x_i_jm1(k) + x_i_jp1(k) +
-	      // 	    x_i_j(k-1) + x_i_j(k+1) );
-		  
-	      // 	});
-	      
-	      // vectorization loop
-#if defined( __INTEL_COMPILER )
-#pragma ivdep
-#endif
-	      for (int k=1; k<n-1; ++k)
-	      	y_i_j(k) = -5*x_i_j(k) +
-	      	  ( x_im1_j(k) + x_ip1_j(k) +
-	      	    x_i_jm1(k) + x_i_jp1(k) +
-	      	    x_i_j(k-1) + x_i_j(k+1) );
-		// y(i,j,k) = -5*x(i,j,k) +
-		//   ( x(i-1,j,k) + x(i+1,j,k) +
-		//     x(i,j-1,k) + x(i,j+1,k) +
-		//     x(i,j,k-1) + x(i,j,k+1) );
-	      
-	    }
-	  } // end for ii
-	} // end for jj
-	
-      });
-    
+          }
+        });
+
   }
   timer.stop();
 
@@ -742,7 +721,7 @@ void bench(int nrepeat) {
   
   std::cout << "###########################" << test_names[6] << "\n";
   for (auto n : size_list)
-    v[6].push_back(test_stencil_3d_range_vector2(n, nrepeat, 32));
+    v[6].push_back(test_stencil_3d_range_vector2(n, nrepeat));
 
   /*
    * create python script for plotting results
@@ -878,7 +857,7 @@ int main(int argc, char* argv[]) {
     
     std::cout << "========================================\n";
     std::cout << "reference naive test using 3d range and vectorization with team policy\n";
-    test_stencil_3d_range_vector2(n, nrepeat,nteams);
+    test_stencil_3d_range_vector2(n, nrepeat);
   }
   
   // Shutdown Kokkos
