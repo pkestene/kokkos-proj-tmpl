@@ -697,13 +697,35 @@ double test_stencil_3d_range_vector2(int n, int nrepeat) {
 
 // ===============================================================
 // ===============================================================
-void bench(int nrepeat) {
+enum bench_type : int {
+  SMALL,
+  MEDIUM,
+  LARGE
+};
+
+// ===============================================================
+// ===============================================================
+void bench(int nrepeat, bench_type bt) {
   
   constexpr int nbTests = 7;
-  
-  //std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 448, 512, 640, 768};
-  std::vector<int> size_list = {32, 48, 64, 92, 128, 160, 192, 224, 256};
-  //std::vector<int> size_list = {32, 48};
+
+  auto select_sizes = 
+    [](bench_type bt)
+    {
+      
+      switch(bt) {
+      case bench_type::SMALL:
+        return std::vector<int> {32, 48};
+      case bench_type::MEDIUM:
+        return std::vector<int> {32, 48, 64, 92, 128, 160, 192, 224, 256};
+      case bench_type::LARGE:
+        return std::vector<int> {32, 48, 64, 92, 128, 160, 192, 224, 256, 320, 384, 448, 512, 640, 768};
+      default:
+        return std::vector<int> {32, 48};
+      }
+    };
+
+  auto size_list = select_sizes(bt);
   int size = size_list.size();
 
   std::array<std::vector<double>,nbTests> v;
@@ -806,7 +828,8 @@ int main(int argc, char* argv[]) {
   int nrepeat = 10;  // number of kernel invocations
   int nteams = 64;   // default number of teams (for TeamPolicy)
   bool bench_enabled = false; // run bench instead
-  
+  bench_type bt = bench_type::MEDIUM;
+
   // Read command line arguments
   for(int i=0; i<argc; i++) {
     if( strcmp(argv[i], "-n") == 0) {
@@ -817,11 +840,23 @@ int main(int argc, char* argv[]) {
       nteams = atoi(argv[++i]);
     } else if( strcmp(argv[i], "-b") == 0) {
       bench_enabled = true;
+    } else if( strcmp(argv[i], "-bs") == 0) {
+      bench_enabled = true;
+      bt = bench_type::SMALL;
+    } else if( strcmp(argv[i], "-bm") == 0) {
+      bench_enabled = true;
+      bt = bench_type::MEDIUM;
+    } else if( strcmp(argv[i], "-bl") == 0) {
+      bench_enabled = true;
+      bt = bench_type::LARGE;
     } else if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)) {
       printf("STENCIL 3D Options:\n");
       printf("  -n <int>:         3d linear size (default: 256)\n");
       printf("  -nrepeat <int>:   number of integration invocations (default: 10)\n");
-      printf("  -b :              run full benchmark\n");
+      printf("  -b :              run full benchmark (default MEDIUM size)\n");
+      printf("  -bs :             run full benchmark (SMALL size)\n");
+      printf("  -bm :             run full benchmark (MEDIUM size)\n");
+      printf("  -bl :             run full benchmark (LARGE size)\n");
       printf("  -help (-h):       print this message\n");
       return EXIT_SUCCESS;
     }
@@ -849,7 +884,7 @@ int main(int argc, char* argv[]) {
   
   if (bench_enabled) {
 
-    bench(nrepeat);
+    bench(nrepeat,bt);
 
   } else {
 
