@@ -45,6 +45,17 @@ using Timer = SimpleTimer;
 using Device = Kokkos::DefaultExecutionSpace;
 using DataArray = Kokkos::View<real_t***, Device>;
 using DataArray1d = Kokkos::View<real_t*, Device>;
+using DataArrayR = Kokkos::View<real_t***, Kokkos::LayoutRight, Device>;
+
+KOKKOS_INLINE_FUNCTION
+double init_x(int i, int j, int k) { 
+  return 1.0*(i+j*0.12345+k*0.31415+0.1);
+}
+
+KOKKOS_INLINE_FUNCTION
+double init_y(int i, int j, int k) { 
+  return 3.0*(i+j+k);
+}
 
 // ===============================================================
 // ===============================================================
@@ -138,8 +149,8 @@ double test_stencil_3d_flat(int n, int nrepeat) {
       
       index2coord(index,i,j,k,n,n,n);
       
-      x(i,j,k) = 1.0*(i+j+k+0.1);
-      y(i,j,k) = 3.0*(i+j+k);
+      x(i,j,k) = init_x(i,j,k);
+      y(i,j,k) = init_y(i,j,k);
     });
 
   // Time computation
@@ -165,7 +176,17 @@ double test_stencil_3d_flat(int n, int nrepeat) {
   }
   timer.stop();
   
-  // Print results
+  // for (int i=13; i<17; ++i) {
+  //   for (int j=13; j<17; ++j) {
+  //     for (int k=13; k<17; ++k) {
+  //       printf("%f ",y(i,j,k));
+  //     }
+  //     printf("\n");
+  //   }
+  //   printf("\n");
+  // }
+
+    // Print results
   double time_seconds = timer.elapsed();
 
   // 6+1 reads + 1 write
@@ -206,8 +227,8 @@ double test_stencil_3d_flat_1d_array(int n, int nrepeat) {
       
       index2coord(index,i,j,k,n,n,n);
       
-      x(index) = 1.0*(i+j+k+0.1);
-      y(index) = 3.0*(i+j+k);
+      x(index) = init_x(i,j,k);
+      y(index) = init_y(i,j,k);
     });
 
   // Time computation
@@ -221,9 +242,9 @@ double test_stencil_3d_flat_1d_array(int n, int nrepeat) {
 	int i,j;
 	index2coord(index,i,j,n,n);
 
-	int dx = n*n;
-	int dy = n;
-	int dz = 1;
+	// int dx = n*n;
+	// int dy = n;
+	// int dz = 1;
 
 	if (i>0 and i<n-1 and
 	    j>0 and j<n-1 )
@@ -304,8 +325,8 @@ double test_stencil_3d_flat_vector(int n, int nrepeat, bool use_1d_views) {
       
       index2coord(index,i,j,k,n,n,n);
       
-      x(i,j,k) = 1.0*(i+j+k+0.1);
-      y(i,j,k) = 3.0*(i+j+k);
+      x(i,j,k) = init_x(i,j,k);
+      y(i,j,k) = init_y(i,j,k);
     });
 
   // Time computation
@@ -436,8 +457,8 @@ double test_stencil_3d_range(int n, int nrepeat) {
 		       KOKKOS_LAMBDA (const int& i,
 				      const int& j,
 				      const int& k) {      
-			 x(i,j,k) = 1.0*(i+j+k+0.1);
-			 y(i,j,k) = 3.0*(i+j+k);
+                         x(i,j,k) = init_x(i,j,k);
+                         y(i,j,k) = init_y(i,j,k);
 		       });
 
   // Time computation
@@ -508,8 +529,8 @@ double test_stencil_3d_range_vector(int n, int nrepeat) {
 		       KOKKOS_LAMBDA (const int& i,
 				      const int& j,
 				      const int& k) {      
-			 x(i,j,k) = 1.0*(i+j+k+0.1);
-			 y(i,j,k) = 3.0*(i+j+k);
+                         x(i,j,k) = init_x(i,j,k);
+                         y(i,j,k) = init_y(i,j,k);
 		       });
 
   // Time computation
@@ -580,9 +601,10 @@ double test_stencil_3d_range_vector2(int n, int nrepeat) {
 
   uint64_t nbCells = n*n*n;
   
-  // Allocate Views
-  DataArray x("X",n,n,n);
-  DataArray y("Y",n,n,n);
+  // Allocate Views - enforce LayoutRight to make sure the fastest index
+  // is used for inner loop iteration
+  DataArrayR x("X",n,n,n);
+  DataArrayR y("Y",n,n,n);
 
   // init 2d range policy
   using Range2D = typename Kokkos::Experimental::MDRangePolicy< Kokkos::Experimental::Rank<2> >;
@@ -591,20 +613,19 @@ double test_stencil_3d_range_vector2(int n, int nrepeat) {
   Range2D range2d( {{0,0}}, {{n,n}} );
   Range3D range3d( {{0,0,0}}, {{n,n,n}} );
 
-  int nbTeams = n*n;
-
   // Initialize arrays using a 3d range policy
   Kokkos::parallel_for("init", range3d,
 		       KOKKOS_LAMBDA (const int& i,
 				      const int& j,
 				      const int& k) {      
-			 x(i,j,k) = 1.0*(i+j+k+0.1);
-			 y(i,j,k) = 3.0*(i+j+k);
+                         x(i,j,k) = init_x(i,j,k);
+			 y(i,j,k) = init_y(i,j,k);
 		       });
 
   // get prepared for TeamPolicy
-  using team_member_t = typename Kokkos::TeamPolicy<>::member_type;
-
+  using team_policy_t = Kokkos::TeamPolicy<Kokkos::IndexType<int>>;
+  using thread_t = team_policy_t::member_type;
+  int nbTeams = n;
   
   // Time computation
   Timer timer;
@@ -614,47 +635,49 @@ double test_stencil_3d_range_vector2(int n, int nrepeat) {
     
     // Do stencil
     Kokkos::parallel_for(
-        "stencil compute - team policy and thread vector range",
-        Kokkos::TeamPolicy<>(nbTeams, Kokkos::AUTO),
-        KOKKOS_LAMBDA(team_member_t team_member) {
-          int lr = team_member.league_rank();
-
-          //int j = lr / n + 1;
-          //int i = lr % n + 1;
-          int i = lr / n + 1;
-          int j = lr % n + 1;
-
-          // auto x_i_j = Kokkos::subview(x, i, j, Kokkos::ALL());
-          // auto y_i_j = Kokkos::subview(y, i, j, Kokkos::ALL());
-          
-          // auto x_im1_j = Kokkos::subview(x, i-1, j, Kokkos::ALL());
-          // auto x_ip1_j = Kokkos::subview(x, i+1, j, Kokkos::ALL());
-          
-          // auto x_i_jm1 = Kokkos::subview(x, i, j-1, Kokkos::ALL());
-          // auto x_i_jp1 = Kokkos::subview(x, i, j+1, Kokkos::ALL());
-
-          if (i>0 and i<n-1 and
-              j>0 and j<n-1) {
-
+      team_policy_t(nbTeams, 
+                    Kokkos::AUTO, /* team size chosen by kokkos */
+                    team_policy_t::vector_length_max()),
+      KOKKOS_LAMBDA(const thread_t& thread) {
+        
+        int i = thread.league_rank();
+        
+        Kokkos::parallel_for(
+          Kokkos::TeamThreadRange(thread, 1, n-1), 
+          [=](const int &j) {
+            
             Kokkos::parallel_for(
-              Kokkos::ThreadVectorRange(team_member, 1, n - 1),
-              KOKKOS_LAMBDA(int &k) {
-                y(i,j,k) = -5 * x(i,j,k) +
-                  (x(i-1,j,k) + x(i+1,j,k) + 
-                   x(i,j-1,k) + x(i,j+1,k) +
-                   x(i,j,k-1) + x(i,j,k+1));
-                // y_i_j(k) = -5*x_i_j(k) +
-                //   ( x_im1_j(k) + x_ip1_j(k) +
-                //     x_i_jm1(k) + x_i_jp1(k) +
-                //     x_i_j(k-1) + x_i_j(k+1) );
-                    
-              });
+              Kokkos::ThreadVectorRange(thread, 1, n-1),
+              [=](const int &k) {
+              
+                if (i>0 and i<n-1 and
+                    j>0 and j<n-1) {
 
-          }
-        });
+                  // if (i==1 and j==1 and k==1)
+                  //   printf("league.size=%d team.size=%d\n",
+                  //          thread.league_size(),
+                  //          thread.team_size());
 
-  }
+                  y(i,j,k) = -5*x(i,j,k) +
+                    (x(i-1,j,k) + x(i+1,j,k) +
+                     x(i,j-1,k) + x(i,j+1,k) +
+                     x(i,j,k-1) + x(i,j,k+1));
+                }
+              }); // end vector range
+          }); // end thread range
+      }); // end team policy
+  } // end for irepeat
   timer.stop();
+
+  // for (int i=13; i<17; ++i) {
+  //   for (int j=13; j<17; ++j) {
+  //     for (int k=13; k<17; ++k) {
+  //       printf("%f ",y(i,j,k));
+  //     }
+  //     printf("\n");
+  //   }
+  //   printf("\n");
+  // }
 
   // Print results
   double time_seconds = timer.elapsed();
