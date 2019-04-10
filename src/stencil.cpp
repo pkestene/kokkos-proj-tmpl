@@ -127,6 +127,35 @@ int INDEX(int i,  int j,
 
 // ===============================================================
 // ===============================================================
+/**
+ * Right Layout linearization
+ */
+KOKKOS_INLINE_FUNCTION
+int RINDEX(int i,  int j,  int k,
+           int Nx, int Ny, int Nz)
+{
+  UNUSED(Nx);
+  UNUSED(Nz);
+  return k + Nz*j + Nz*Ny*i; // right layout
+} // RINDEX
+
+// ===============================================================
+// ===============================================================
+KOKKOS_INLINE_FUNCTION
+void index2coord_right(int index,
+                       int &i, int &j, int &k,
+                       int Nx, int Ny, int Nz)
+{
+  UNUSED(Nx);
+  UNUSED(Nz);
+  int NyNz = Ny*Nz;
+  i = index / NyNz;
+  j = (index - i*NyNz) / Nz;
+  k = index - j*Nz - i*NyNz;
+} // index2coord_right - 3d
+
+// ===============================================================
+// ===============================================================
 // ===============================================================
 /**
  * version 1 : naive
@@ -744,6 +773,16 @@ double test_stencil_3d_range_hierarchical2(int n, int nbTeams, int nrepeat) {
 			 y(i,j,k) = init_y(i,j,k);
 		       });
 
+  // for (int i=13; i<17; ++i) {
+  //   for (int j=13; j<17; ++j) {
+  //     for (int k=13; k<17; ++k) {
+  //       printf("%f ",y(i,j,k));
+  //     }
+  //     printf("\n");
+  //   }
+  //   printf("\n");
+  // }
+
   // get prepared for TeamPolicy
   using team_policy_t = Kokkos::TeamPolicy<Kokkos::IndexType<int>>;
   using thread_t = team_policy_t::member_type;
@@ -840,6 +879,128 @@ double test_stencil_3d_range_hierarchical2(int n, int nbTeams, int nrepeat) {
 
 // ===============================================================
 // ===============================================================
+// ===============================================================
+/**
+ * version 5 ter :
+ * same as version 5 but use linearized array
+ *
+ * - a TeamPolicy        Kokkos::policy for the outer loop 
+ * - a TeamThreadRange   Kokkos::policy to divide middle loop over threads
+ * - a ThreadVectorRange Kokkos::policy for the inner loop (for CPU vectorization or GPU warp parallelism)
+ *
+ * Note that we use the same linearization for both CPU/GPU :
+ * Kokkos::LayoutRight
+ * We try to optimize by ensuring the inner loop will
+ * use contiguous memory data.
+ *
+ */
+double test_stencil_3d_range_hierarchical3(int n, int nrepeat) {
+
+  uint64_t nbCells = n*n*n;
+  
+  // Allocate Views - enforce LayoutRight to make sure the fastest index
+  // is used for inner loop iteration
+  DataArray1d x("X",n*n*n);
+  DataArray1d y("Y",n*n*n);
+
+  // init 2d range policy
+  using Range2D = typename Kokkos::Experimental::MDRangePolicy< Kokkos::Experimental::Rank<2> >;
+  using Range3D = typename Kokkos::Experimental::MDRangePolicy< Kokkos::Experimental::Rank<3> >;
+
+  Range2D range2d( {{0,0}}, {{n,n}} );
+  Range3D range3d( {{0,0,0}}, {{n,n,n}} );
+
+  // Initialize arrays using a 3d range policy
+  Kokkos::parallel_for("init", n*n*n,
+		       KOKKOS_LAMBDA (const int& index) {
+                         int i,j,k;
+      
+                         index2coord_right(index,i,j,k,n,n,n);
+
+                         x(index) = init_x(i,j,k);
+			 y(index) = init_y(i,j,k);
+		       });
+
+  // for (int i=13; i<17; ++i) {
+  //   for (int j=13; j<17; ++j) {
+  //     for (int k=13; k<17; ++k) {
+  //       printf("%f ",y(RINDEX(i,j,k,n,n,n)));
+  //     }
+  //     printf("\n");
+  //   }
+  //   printf("\n");
+  // }
+
+  // get prepared for TeamPolicy
+  using team_policy_t = Kokkos::TeamPolicy<Kokkos::IndexType<int>>;
+  using thread_t = team_policy_t::member_type;
+  int nbTeams = n;
+  
+  // Time computation
+  Timer timer;
+  
+  timer.start();
+  for(int irepeat = 0; irepeat < nrepeat; irepeat++) {
+    
+    // Do stencil
+    Kokkos::parallel_for(
+      team_policy_t(nbTeams, 
+                    Kokkos::AUTO, /* team size chosen by kokkos */
+                    team_policy_t::vector_length_max()),
+      KOKKOS_LAMBDA(const thread_t& thread) {
+        
+        int i = thread.league_rank();
+        
+        Kokkos::parallel_for(
+          Kokkos::TeamThreadRange(thread, 1, n-1), 
+          [=](const int &j) {
+            
+            Kokkos::parallel_for(
+              Kokkos::ThreadVectorRange(thread, 1, n-1),
+              [=](const int &k) {
+              
+                if (i>0 and i<n-1 and
+                    j>0 and j<n-1) {
+
+                  y(RINDEX(i,j,k,n,n,n)) = -5*x(RINDEX(i,j,k,n,n,n)) +
+                    (x(RINDEX(i-1,j,k,n,n,n)) + x(RINDEX(i+1,j,k,n,n,n)) +
+                     x(RINDEX(i,j-1,k,n,n,n)) + x(RINDEX(i,j+1,k,n,n,n)) +
+                     x(RINDEX(i,j,k-1,n,n,n)) + x(RINDEX(i,j,k+1,n,n,n)));
+                }
+              }); // end vector range
+          }); // end thread range
+      }); // end team policy
+  } // end for irepeat
+  timer.stop();
+
+  // for (int i=13; i<17; ++i) {
+  //   for (int j=13; j<17; ++j) {
+  //     for (int k=13; k<17; ++k) {
+  //       printf("%f ",y(RINDEX(i,j,k,n,n,n)));
+  //     }
+  //     printf("\n");
+  //   }
+  //   printf("\n");
+  // }
+
+  // Print results
+  double time_seconds = timer.elapsed();
+
+  // 6+1 reads + 1 write
+  double dataSizeMBytes = 1.0e-6*nbCells*sizeof(real_t)*(7+1);
+  double bandwidth = 1.0e-3*dataSizeMBytes*nrepeat/time_seconds;
+  
+  printf("#nbCells      Time(s)  TimePerIterations(s) size(MB) BW(GB/s)\n");
+  printf("%13lu %8lf %20.3e  %6.3f %3.3f\n",
+	 nbCells, time_seconds, time_seconds/nrepeat,
+	 dataSizeMBytes,bandwidth);
+
+  return bandwidth;
+  
+} // test_stencil_3d_range_hierarchical3
+
+// ===============================================================
+// ===============================================================
 enum bench_type : int {
   SMALL,
   MEDIUM,
@@ -850,7 +1011,7 @@ enum bench_type : int {
 // ===============================================================
 void bench(int nrepeat, bench_type bt) {
   
-  constexpr int nbTests = 7;
+  constexpr int nbTests = 8;
 
   auto select_sizes = 
     [](bench_type bt)
@@ -880,7 +1041,8 @@ void bench(int nrepeat, bench_type bt) {
     "# test_stencil_3d_flat_vector with    views",
     "# test_stencil_3d_range",
     "# test_stencil_3d_range_vector",
-    "# test_stencil_3d_range_hierarchical"
+    "# test_stencil_3d_range_hierarchical",
+    "# test_stencil_3d_range_hierarchical_linearized"
   };
   
   std::cout << "###########################" << test_names[0] << "\n";
@@ -911,6 +1073,10 @@ void bench(int nrepeat, bench_type bt) {
   for (auto n : size_list)
     v[6].push_back(test_stencil_3d_range_hierarchical(n, nrepeat));
 
+  std::cout << "###########################" << test_names[7] << "\n";
+  for (auto n : size_list)
+    v[7].push_back(test_stencil_3d_range_hierarchical3(n, nrepeat));
+  
   /*
    * create python script for plotting results
    */
@@ -946,6 +1112,7 @@ void bench(int nrepeat, bench_type bt) {
   ofs << "plt.plot(size,v4, label='"<<test_names[4]<<"')\n";
   ofs << "plt.plot(size,v5, label='"<<test_names[5]<<"')\n";
   ofs << "plt.plot(size,v6, label='"<<test_names[6]<<"')\n";
+  ofs << "plt.plot(size,v7, label='"<<test_names[7]<<"')\n";
 
   ofs << "plt.grid(True)\n";
 
@@ -1064,6 +1231,10 @@ int main(int argc, char* argv[]) {
     std::cout << "========================================\n";
     std::cout << "reference naive test using 3d range and vectorization with team policy - nbTeams configurable\n";
     test_stencil_3d_range_hierarchical2(n, nteams, nrepeat);
+
+    std::cout << "========================================\n";
+    std::cout << "reference naive test using 3d range and vectorization with team policy - linearized data\n";
+    test_stencil_3d_range_hierarchical3(n, nrepeat);
   }
   
   // Shutdown Kokkos
