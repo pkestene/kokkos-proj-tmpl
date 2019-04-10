@@ -55,6 +55,10 @@ Intel Skylake (2x20 cores, Intel Xeon Gold 5115, icpc 2018.0.128)
 
 ![stencil bench skylake icpc](https://github.com/pkestene/kokkos-proj-tmpl/raw/master/doc/stencil/stencil_bench_alfven_skylake_icpc.png "Skylake (2x20 cores, Intel Xeon Gold 5115, icpc 2018.0.128)")
 
+Intel KNL (icpc 2017.0.6.256, OMP_NUM_THREADS=64)
+
+![stencil bench knl icpc_omp_64](https://github.com/pkestene/kokkos-proj-tmpl/raw/master/doc/stencil/stencil_bench_irene_knl_omp_64.png "Skylake (Intel KNL, icpc 2017.0.6.256, 64 threads)")
+
 Nvidia K80, cuda 9.2
 
 ![stencil bench nvidia k80](https://github.com/pkestene/kokkos-proj-tmpl/raw/master/doc/stencil/stencil_bench_ouessant_k80.png "Nvidia K80, cuda 9.2")
