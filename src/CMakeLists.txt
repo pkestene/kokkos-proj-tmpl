@@ -4,11 +4,11 @@
 macro(build_exec name)
 
   # define executable name
-  if (KOKKOS_ENABLE_CUDA)
+  if (Kokkos_ENABLE_CUDA)
     set(EXE_NAME "${name}.cuda")
-  elseif(KOKKOS_ENABLE_OPENMP)
+  elseif(Kokkos_ENABLE_OPENMP)
     set(EXE_NAME "${name}.openmp")
-  elseif(KOKKOS_ENABLE_PTHREAD)
+  elseif(Kokkos_ENABLE_PTHREAD)
     set(EXE_NAME "${name}.pthread")
   else()
     set(EXE_NAME "${name}.serial")
@@ -20,12 +20,12 @@ macro(build_exec name)
     )
 
   # add timer
-  if (KOKKOS_ENABLE_CUDA)
+  if (Kokkos_ENABLE_CUDA)
     set (EXE_NAME_SRC
       ${EXE_NAME_SRC}
       CudaTimer.h
       )
-  elseif (KOKKOS_ENABLE_OPENMP)
+  elseif (Kokkos_ENABLE_OPENMP)
     set (EXE_NAME_SRC
       ${EXE_NAME_SRC}
       OpenMPTimer.h
@@ -53,7 +53,7 @@ macro(build_exec name)
     ${EXE_NAME_SRC})
   
   target_link_libraries(${EXE_NAME} kokkos)
-  if (KOKKOS_ENABLE_HWLOC)
+  if (Kokkos_ENABLE_HWLOC)
     target_link_libraries(${EXE_NAME} hwloc)
   endif()
   
