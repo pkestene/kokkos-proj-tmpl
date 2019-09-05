@@ -126,8 +126,8 @@ void test_saxpy(int length, int nrepeat) {
   timer.reset();
   timer.start();
   for(int k = 0; k < nrepeat; k++) {
-    cuda_saxpy<<<nBlocks,blockSize>>>(x.ptr_on_device(),
-				      y.ptr_on_device(),
+    cuda_saxpy<<<nBlocks,blockSize>>>(x.data(),
+				      y.data(),
 				      length);
   }
   timer.stop();
