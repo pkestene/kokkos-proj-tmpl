@@ -30,7 +30,7 @@ You **NEED** to use nvcc_wrapper as the CXX compiler. nvcc_wrapper is located in
 mkdir build_cuda
 cd build_cuda
 export CXX=/path/to/kokkos-proj-tmpl/external/kokkos/bin/nvcc_wrapper
-cmake -DKokkos_ENABLE_CUDA=ON -DKokkos_ENABLE_CUDA_LAMBDA=ON -DKokkos_ARCH=Maxwell50 ..
+cmake -DKokkos_ENABLE_CUDA=ON -DKokkos_ENABLE_CUDA_LAMBDA=ON -DKokkos_ARCH_MAXWELL50=ON ..
 make
 # then you can run the application as before
 ./src/saxpy_kokkos_lambda.cuda
