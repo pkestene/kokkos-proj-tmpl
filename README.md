@@ -9,6 +9,10 @@ git clone --recursive git@github.com:pkestene/kokkos-proj-tmpl.git
 
 ## How to build ?
 
+### Requirement
+
+- [cmake](https://cmake.org/) version 3.16 
+
 ### Build with target device OpenMP
 
 ```bash
