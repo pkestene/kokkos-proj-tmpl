@@ -25,7 +25,7 @@ protected:
   unsigned int array_size;
 
   using view_t = Kokkos::View<T*>;
-  using mirror_view_t = typename Kokkos::View<T*>::HostMirror;
+  using mirror_view_t = typename view_t::HostMirror;
 
   // Device side pointers to arrays
   view_t d_a;
