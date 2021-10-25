@@ -2,3 +2,6 @@
 	path = external/kokkos
 	url = https://github.com/kokkos/kokkos
 	branch = develop
+[submodule "simd-math"]
+	path = external/simd-math
+	url = git@github.com:kokkos/simd-math.git
