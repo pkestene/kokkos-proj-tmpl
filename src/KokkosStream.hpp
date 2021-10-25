@@ -20,31 +20,34 @@
 template <class T>
 class KokkosStream : public Stream<T>
 {
-  protected:
-    // Size of arrays
-    unsigned int array_size;
+protected:
+  // Size of arrays
+  unsigned int array_size;
 
-    // Device side pointers to arrays
-     typename Kokkos::View<T*>* d_a;
-     typename Kokkos::View<T*>* d_b;
-     typename Kokkos::View<T*>* d_c;
-     typename Kokkos::View<T*>::HostMirror* hm_a;
-     typename Kokkos::View<T*>::HostMirror* hm_b;
-     typename Kokkos::View<T*>::HostMirror* hm_c;
+  using view_t = Kokkos::View<T*>;
+  using mirror_view_t = typename Kokkos::View<T*>::HostMirror;
 
-  public:
+  // Device side pointers to arrays
+  view_t d_a;
+  view_t d_b;
+  view_t d_c;
+  mirror_view_t hm_a;
+  mirror_view_t hm_b;
+  mirror_view_t hm_c;
 
-    KokkosStream(const unsigned int, const int);
-    ~KokkosStream();
+public:
 
-    virtual void copy() override;
-    virtual void add() override;
-    virtual void mul() override;
-    virtual void triad() override;
-    virtual T dot() override;
+  KokkosStream(const unsigned int, const int);
+  ~KokkosStream();
 
-    virtual void init_arrays(T initA, T initB, T initC) override;
-    virtual void read_arrays(
-            std::vector<T>& a, std::vector<T>& b, std::vector<T>& c) override;
+  virtual void copy() override;
+  virtual void add() override;
+  virtual void mul() override;
+  virtual void triad() override;
+  virtual T dot() override;
+
+  virtual void init_arrays(T initA, T initB, T initC) override;
+  virtual void read_arrays(
+    std::vector<T>& a, std::vector<T>& b, std::vector<T>& c) override;
 };
 

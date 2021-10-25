@@ -7,8 +7,8 @@ project(kokkos-proj-tmpl
 # always export compile commands database
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# C++14 is for Kokkos
-set(CMAKE_CXX_STANDARD 14)
+# C++17 is for Kokkos (to be able to use KOKKOS_CLASS_LAMBDA)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(default_build_type "Release")

@@ -47,6 +47,24 @@ int main(int argc, char *argv[])
 
   parseArguments(argc, argv);
 
+  Kokkos::ScopeGuard guard(argc, argv);
+
+  {
+    std::cout << "##########################\n";
+    std::ostringstream msg;
+    std::cout << "Kokkos configuration" << std::endl;
+    if ( Kokkos::hwloc::available() ) {
+      msg << "hwloc( NUMA[" << Kokkos::hwloc::get_available_numa_count()
+          << "] x CORE["    << Kokkos::hwloc::get_available_cores_per_numa()
+          << "] x HT["      << Kokkos::hwloc::get_available_threads_per_core()
+          << "] )"
+          << std::endl ;
+    }
+    Kokkos::print_configuration( msg );
+    std::cout << msg.str();
+    std::cout << "##########################\n";
+  }
+
   if (!output_as_csv)
   {
     std::cout
