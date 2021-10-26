@@ -4,4 +4,4 @@
 	branch = develop
 [submodule "simd-math"]
 	path = external/simd-math
-	url = git@github.com:kokkos/simd-math.git
+	url = git@github.com:pkestene/simd-math.git
