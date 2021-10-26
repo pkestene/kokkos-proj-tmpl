@@ -17,7 +17,7 @@
 
 #include "Stream.h"
 
-#define IMPLEMENTATION_STRING "SimdKokkos"
+//#define IMPLEMENTATION_STRING "SimdKokkos"
 
 // ====================================================================
 // ====================================================================

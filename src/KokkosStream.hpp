@@ -15,7 +15,7 @@
 
 #include "Stream.h"
 
-#define IMPLEMENTATION_STRING "Kokkos"
+//#define IMPLEMENTATION_STRING "Kokkos"
 
 template <class T>
 class KokkosStream : public Stream<T>
