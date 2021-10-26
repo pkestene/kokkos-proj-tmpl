@@ -20,6 +20,7 @@
 #include "Stream.h"
 
 #include "KokkosStream.hpp"
+#include "SimdKokkosStream.hpp"
 
 // Default size of 2^25
 //unsigned int ARRAY_SIZE = 33554432;
@@ -30,6 +31,7 @@ bool use_float = false;
 bool triad_only = false;
 bool output_as_csv = false;
 std::string csv_separator = ",";
+bool use_simd = false;
 
 template <typename T>
 void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum);
@@ -67,10 +69,11 @@ int main(int argc, char *argv[])
 
   if (!output_as_csv)
   {
+    std::string implemStr = use_simd ? "SimdKokkos" : "Kokkos";
     std::cout
       << "BabelStream" << std::endl
       << "Version: " << VERSION_STRING << std::endl
-      << "Implementation: " << IMPLEMENTATION_STRING << std::endl;
+      << "Implementation: " << implemStr << std::endl;
   }
 
   // TODO: Fix Kokkos to allow multiple template specializations
@@ -126,7 +129,10 @@ void run()
   Stream<T> *stream;
 
   // Use the Kokkos implementation
-  stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
+  if(use_simd)
+    stream = new SimdKokkosStream<T>(ARRAY_SIZE, deviceIndex);
+  else
+    stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
 
   stream->init_arrays(startA, startB, startC);
 
@@ -297,7 +303,10 @@ void run_triad()
 
 #elif defined(KOKKOS)
   // Use the Kokkos implementation
-  stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
+  if(use_simd)
+    stream = new SimdKokkosStream<T>(ARRAY_SIZE, deviceIndex);
+  else
+    stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
 
 #elif defined(ACC)
   // Use the OpenACC implementation
@@ -483,6 +492,10 @@ void parseArguments(int argc, char *argv[])
     {
       triad_only = true;
     }
+    else if (!std::string("--simd").compare(argv[i]))
+    {
+      use_simd = true;
+    }
     else if (!std::string("--csv").compare(argv[i]))
     {
       output_as_csv = true;
@@ -500,6 +513,7 @@ void parseArguments(int argc, char *argv[])
       std::cout << "  -n  --numtimes   NUM     Run the test NUM times (NUM >= 2)" << std::endl;
       std::cout << "      --float              Use floats (rather than doubles)" << std::endl;
       std::cout << "      --triad-only         Only run triad" << std::endl;
+      std::cout << "      --simd               Use simd instructions" << std::endl;
       std::cout << "      --csv                Output as csv table" << std::endl;
       std::cout << std::endl;
       exit(EXIT_SUCCESS);
