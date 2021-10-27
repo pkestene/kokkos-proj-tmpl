@@ -149,6 +149,7 @@ T SimdKokkosStream<T>::dot()
   //   res+=res_view(i);
   // return res;
 
+  return 0;
 }
 
 template class SimdKokkosStream<float>;
