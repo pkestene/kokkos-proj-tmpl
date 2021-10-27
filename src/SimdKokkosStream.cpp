@@ -127,25 +127,27 @@ template <class T>
 T SimdKokkosStream<T>::dot()
 {
 
+  // This is still buggy when simd_t is simd_abi::native, but ok whi simd_abi::pack
+
   // simd_t sum = simd_t(0.0);
 
-  // using SimdReducerResult = SimdReducer<T, Kokkos::HostSpace>;
+  // using SimdReducerResult = SimdReducer<T, Kokkos::DefaultExecutionSpace>;
 
-  //  Kokkos::parallel_reduce(array_size_vector, KOKKOS_CLASS_LAMBDA (const long index, simd_t &tmp)
+  // Kokkos::parallel_reduce(array_size_vector, KOKKOS_LAMBDA (const long index, simd_t &tmp)
   // {
   //   const auto sindex = index*simd_t::size();
   //   const auto val = load<T,simd_t>(&d_a(sindex)) * load<T,simd_t>(&d_b(sindex));
-  //   tmp = tmp + val2;
+  //   tmp = tmp + val;
   // }, SimdReducerResult(sum));
 
+  // auto res_view = Kokkos::View<T*, Kokkos::HostSpace>( "res", simd_t::size() );
+  // store(res_view.data(), sum);
 
-   // auto res = Kokkos::View<T*, Kokkos::HostSpace>( "res", simd_t::size() );
-   // store(res.data(), sum);
-
-   // for (int i = 0; i<simd_t::size(); ++i)
-   //   printf("%f ",res(i));
-   // printf("\n");
-  return 0.0;
+  // // final horizontal reduction (should be done with simd operator)
+  // T res=0;
+  // for (int i = 0; i<simd_t::size(); ++i)
+  //   res+=res_view(i);
+  // return res;
 
 }
 

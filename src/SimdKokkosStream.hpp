@@ -33,6 +33,7 @@ public:
   using simd_t = typename simd::simd<T,simd::simd_abi::cuda_warp<32>>;
 #else
   using simd_t = typename simd::simd<T,simd::simd_abi::native>;
+  //using simd_t = typename simd::simd<T,simd::simd_abi::pack<8>>;
 #endif
   using simd_storage_t = typename simd_t::storage_type;
 
@@ -67,63 +68,66 @@ public:
 
 }; // class SimdKokkosStream
 
-// namespace Kokkos { //reduction identity must be defined in Kokkos namespace
-//    template<>
-//    struct reduction_identity< SimdKokkosStream<float>::simd_t > {
-//       KOKKOS_FORCEINLINE_FUNCTION static SimdKokkosStream<float>::simd_t sum() {
-//          return SimdKokkosStream<float>::simd_t(0.0f);
-//       }
-//    };
-//    template<>
-//    struct reduction_identity< SimdKokkosStream<double>::simd_t > {
-//       KOKKOS_FORCEINLINE_FUNCTION static SimdKokkosStream<double>::simd_t sum() {
-//          return SimdKokkosStream<double>::simd_t(0.0);
-//       }
-//    };
-// }
+namespace Kokkos { //reduction identity must be defined in Kokkos namespace
+template<>
+struct reduction_identity< SimdKokkosStream<float>::simd_t > {
+  KOKKOS_FORCEINLINE_FUNCTION static SimdKokkosStream<float>::simd_t sum() {
+    return SimdKokkosStream<float>::simd_t(1.0f);
+  }
+};
+template<>
+struct reduction_identity< SimdKokkosStream<double>::simd_t > {
+  KOKKOS_FORCEINLINE_FUNCTION static SimdKokkosStream<double>::simd_t sum() {
+    return SimdKokkosStream<double>::simd_t(1.0);
+  }
+};
+}
 
 // ====================================================================
 // ====================================================================
 // custom reducer for simd type
-// template <class T, class Space>
-// struct SimdReducer {
-//  public:
+template <class T, class Space>
+struct SimdReducer {
+ public:
 
-//   using simd_t = typename SimdKokkosStream<T>::simd_t;
-//   using simd_storage_t = typename SimdKokkosStream<T>::simd_storage_t;
+  using simd_t = typename SimdKokkosStream<T>::simd_t;
+  using simd_storage_t = typename SimdKokkosStream<T>::simd_storage_t;
 
-//   //using view_t = Kokkos::View<T*>;
+  // Required
+  using reducer = SimdReducer<T, Space>;
+  using value_type = simd_t;
+  using value_type_storage = simd_storage_t;
+  using result_view_type = Kokkos::View<value_type, Space, Kokkos::MemoryUnmanaged>;
 
-//   // Required
-//   using reducer = SimdReducer;
-//   using value_type = simd_t;
-//   using result_view_type = Kokkos::View<value_type*, Space, Kokkos::MemoryUnmanaged>;
+ private:
+  result_view_type value;
 
-//  private:
-//   value_type& value;
+ public:
+  KOKKOS_INLINE_FUNCTION
+  SimdReducer(value_type& value_) : value(&value_) {}
 
-//  public:
-//   KOKKOS_INLINE_FUNCTION
-//   SimdReducer(value_type& value_) : value(value_) {}
+  // Required
+  KOKKOS_INLINE_FUNCTION
+  void join(value_type& dest, const value_type& src) const {
+    dest = dest + src;
+  }
 
-//   // Required
-//   KOKKOS_INLINE_FUNCTION
-//   void join(value_type& dest, const value_type& src) const { dest = dest + src; }
+  KOKKOS_INLINE_FUNCTION
+  void join(volatile value_type& dest, const volatile value_type& src) const {
+    dest += src;
+  }
 
-//   KOKKOS_INLINE_FUNCTION
-//   void join(volatile value_type& dest, const volatile value_type& src) const {
-//     dest.plus_equals(src);
-//   }
+  KOKKOS_INLINE_FUNCTION
+  void init(value_type& val) const {
+    val = simd_t(0.0);
+  }
 
-//   KOKKOS_INLINE_FUNCTION
-//   void init(value_type& val) const { val = simd_t(0.0); }
+  KOKKOS_INLINE_FUNCTION
+  value_type& reference() const { return *value.data(); }
 
-//   KOKKOS_INLINE_FUNCTION
-//   value_type& reference() const { return value; }
+  KOKKOS_INLINE_FUNCTION
+  result_view_type view() const { return value; }
 
-//   KOKKOS_INLINE_FUNCTION
-//   result_view_type view() const { return result_view_type(&value, 1); }
-
-//   KOKKOS_INLINE_FUNCTION
-//   bool references_scalar() const { return true; }
-// };
+  KOKKOS_INLINE_FUNCTION
+  bool references_scalar() const { return true; }
+};
