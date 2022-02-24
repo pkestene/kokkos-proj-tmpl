@@ -49,9 +49,14 @@ macro(build_exec name)
   if (${name} STREQUAL KokkosStream_bench)
     target_sources(${EXE_NAME}
       PRIVATE
-      KokkosStream.cpp
-      SimdKokkosStream.cpp)
-    target_include_directories(${EXE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/external/simd-math)
+      KokkosStream.cpp)
+    if(USE_SIMD_KOKKOS)
+      target_sources(${EXE_NAME}
+        PRIVATE
+        SimdKokkosStream.cpp)
+      target_compile_definitions(${EXE_NAME} PRIVATE USE_SIMD_KOKKOS)
+      target_include_directories(${EXE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/external/simd-math)
+    endif()
   endif()
 
   target_link_libraries(${EXE_NAME} PRIVATE Kokkos::kokkos)

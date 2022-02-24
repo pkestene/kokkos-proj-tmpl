@@ -20,7 +20,9 @@
 #include "Stream.h"
 
 #include "KokkosStream.hpp"
+#ifdef USE_SIMD_KOKKOS
 #include "SimdKokkosStream.hpp"
+#endif
 
 // Default size of 2^25
 //unsigned int ARRAY_SIZE = 33554432;
@@ -69,7 +71,11 @@ int main(int argc, char *argv[])
 
   if (!output_as_csv)
   {
+#ifdef USE_SIMD_KOKKOS
     std::string implemStr = use_simd ? "SimdKokkos" : "Kokkos";
+#else
+    std::string implemStr = "Kokkos";
+#endif
     std::cout
       << "BabelStream" << std::endl
       << "Version: " << VERSION_STRING << std::endl
@@ -129,10 +135,14 @@ void run()
   Stream<T> *stream;
 
   // Use the Kokkos implementation
+#ifdef USE_SIMD_KOKKOS
   if(use_simd)
     stream = new SimdKokkosStream<T>(ARRAY_SIZE, deviceIndex);
   else
     stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
+#else
+  stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
+#endif
 
   stream->init_arrays(startA, startB, startC);
 
@@ -303,10 +313,14 @@ void run_triad()
 
 #elif defined(KOKKOS)
   // Use the Kokkos implementation
+#ifdef USE_SIMD_KOKKOS
   if(use_simd)
     stream = new SimdKokkosStream<T>(ARRAY_SIZE, deviceIndex);
   else
     stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
+#else
+  stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
+#endif
 
 #elif defined(ACC)
   // Use the OpenACC implementation
@@ -494,7 +508,12 @@ void parseArguments(int argc, char *argv[])
     }
     else if (!std::string("--simd").compare(argv[i]))
     {
+#ifdef USE_SIMD_KOKOS
       use_simd = true;
+#else
+      use_simd = false;
+      std::cout << "Kokkos simd not available, rebuild with USE_SIMD_KOKKOS=ON\n";
+#endif
     }
     else if (!std::string("--csv").compare(argv[i]))
     {

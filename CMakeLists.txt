@@ -21,6 +21,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+option(USE_SIMD_KOKKOS "Should we enable simd from kokkos" OFF)
+
 #
 # sources
 #
