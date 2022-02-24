@@ -1,3 +1,10 @@
+find_package(PkgConfig REQUIRED)
+
+# do we need to detect hwloc using pkg-config ?
+if (Kokkos_ENABLE_HWLOC)
+  pkg_check_modules(HWLOC REQUIRED IMPORTED_TARGET hwloc)
+endif()
+
 #
 # define a macro to build an executable
 #
@@ -49,7 +56,7 @@ macro(build_exec name)
 
   target_link_libraries(${EXE_NAME} PRIVATE Kokkos::kokkos)
   if (Kokkos_ENABLE_HWLOC)
-    target_link_libraries(${EXE_NAME} PRIVATE hwloc)
+    target_link_libraries(${EXE_NAME} PRIVATE PkgConfig::HWLOC)
   endif()
 
 endmacro(build_exec)
