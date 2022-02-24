@@ -53,6 +53,9 @@
 #ifdef KOKKOS_ENABLE_CUDA
 #include "CudaTimer.h"
 using Timer = CudaTimer;
+#elif defined( KOKKOS_ENABLE_HIP)
+#include "HipTimer.h"
+using Timer = HipTimer;
 #elif defined(KOKKOS_ENABLE_OPENMP)
 #include "OpenMPTimer.h"
 using Timer = OpenMPTimer;
