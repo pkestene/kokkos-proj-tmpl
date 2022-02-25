@@ -11,7 +11,16 @@ git clone --recursive git@github.com:pkestene/kokkos-proj-tmpl.git
 
 ### Requirement
 
-- [cmake](https://cmake.org/) version 3.16 
+- [cmake](https://cmake.org/) version 3.16
+
+- **note**: if you are on a fairly recent OS (ex: Ubuntu 21.10, or any OS using glibc >= 2.34), you may need to turn off linking with libdl when using kokkos/cuda backend. See [this issue](https://github.com/kokkos/kokkos/issues/4824), as nvcc (even version 11.6) apparently doesn't seem to handle empty file `/usr/lib/x86_64-linux-gnu/libdl.a` (stub, libdl is integrated into glibc). Hopefully this will be solved in an upcoming cuda release.
+
+```shell
+# run this to know your glibc version
+ldd --version
+```
+
+
 
 ### Build with target device OpenMP
 
