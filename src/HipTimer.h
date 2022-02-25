@@ -1,4 +1,4 @@
-**
+/**
  * \file HipTimer.h
  * \brief A simple timer class for HIP based on events.
  *
