@@ -92,3 +92,25 @@ Nvidia P100, cuda 9.2
 
 ![stencil bench nvidia p100](https://github.com/pkestene/kokkos-proj-tmpl/raw/master/doc/stencil/stencil_bench_ouessant_p100.png "Nvidia P100, cuda 9.2")
 
+### glibc 2.34 and nvlink error
+
+If using glibc version >= 2.34 you get the following link error when building with Cuda backend:
+
+```shell
+[ 65%] Linking CXX executable saxpy_kokkos_lambda.cuda
+nvlink fatal   : Could not open input file '/usr/lib/x86_64-linux-gnu/libdl.a'
+make[2]: *** [src/CMakeFiles/saxpy_kokkos_lambda.cuda.dir/build.make:118: src/saxpy_kokkos_lambda.cuda] Error 1
+make[1]: *** [CMakeFiles/Makefile2:1047: src/CMakeFiles/saxpy_kokkos_lambda.cuda.dir/all] Error 2
+make: *** [Makefile:136: all] Error 2
+```
+
+One temporary solution (until fixed in a future nvcc release ?) is mentionned here:
+https://matsci.org/t/lammps-users-kokkos-linker-error-nvidia-libdl-a/41050
+
+for simplicity, you just need to create a fake `libdl.a`, e.g. in current build dirrector
+```shell
+touch empty.c
+gcc -fpic -c empty.c
+ar rcsv libdl.a empty.o
+```
+and then reconfigure cmake with additionnal flag `-DLIBDL_LIBRARY=$PWD/libdl.a` and the build will work as expected.
