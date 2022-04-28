@@ -311,7 +311,7 @@ void run_triad()
   // Use the RAJA implementation
   stream = new RAJAStream<T>(ARRAY_SIZE, deviceIndex);
 
-#elif defined(KOKKOS)
+#elif defined(KOKKOS_VERSION)
   // Use the Kokkos implementation
 #ifdef USE_SIMD_KOKKOS
   if(use_simd)
