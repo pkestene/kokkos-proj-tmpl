@@ -72,4 +72,4 @@ build_exec(compute_pi)
 build_exec(deep_copy)
 build_exec(stencil)
 build_exec(KokkosStream_bench)
-
+build_exec(BatchedDotProduct)
