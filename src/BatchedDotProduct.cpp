@@ -56,7 +56,7 @@ class DotProdFunctor
       dot_prod);
     // only one thread per team, collect the final reduction result, and write it
     // the output view
-    Kokkos::single(Kokkos::PerThread(member), [&]() { m_dotProd(j) = dot_prod; });
+    Kokkos::single(Kokkos::PerTeam(member), [&]() { m_dotProd(j) = dot_prod; });
 
   }
 
@@ -149,7 +149,7 @@ void batched_dot_product(int nx, int ny, int nrepeat, bool use_lambda)
         dot_prod);
       // only one thread per team, collect the final reduction result, and write it
       // the output view
-      Kokkos::single(Kokkos::PerThread(member), [&]() { dotProd(j) = dot_prod; });
+     Kokkos::single(Kokkos::PerTeam(member), [&]() { dotProd(j) = dot_prod; });
     };
 
   // create functor to compute batched dot product
