@@ -1,3 +1,7 @@
+/*
+ * Same as BatchedDotProduct.cpp but running multiple teams per dot product.
+ */
+
 #include<cmath>
 #include<cstdio>
 #include<cstdlib>
@@ -21,6 +25,44 @@ using Timer = OpenMPTimer;
 using Timer = SimpleTimer;
 #endif
 
+/*
+ * Use the same heuristic as in KokkosKernels to compute the requested number of teams per
+ * dot.
+ *
+ * see
+ * https://github.com/kokkos/kokkos-kernels/blob/master/src/blas/impl/KokkosBlas_util.hpp
+ */
+int computeNbTeamsPerDot(int vector_length, int nbDots)
+{
+
+  constexpr int workPerTeam = 4096;  // desired amount of work per team
+  int teamsPerDot = 1;
+
+  // approximate number of teams
+  int approxNumTeams =
+      (vector_length * nbDots) / workPerTeam;
+
+  // Adjust approxNumTeams in case it is too small or too large
+  if (approxNumTeams < 1)    approxNumTeams = 1;
+  if (approxNumTeams > 1024) approxNumTeams = 1024;
+
+  // If there are more reductions than the number of teams,
+  // then set the number of teams to be number of reductions.
+  // We don't want a team to contribute to more than one reduction.
+  if (nbDots >= approxNumTeams) {
+    teamsPerDot = 1;
+  }
+  // If there are more teams than reductions, each reduction can
+  // potentially be performed by multiple teams. First, compute
+  // teamsPerDot as an integer (take the floor, not ceiling), then,
+  // compute actual number of teams by using this factor.
+  else {
+    teamsPerDot = approxNumTeams / nbDots;
+  }
+
+  return teamsPerDot;
+}
+
 class DotProdFunctor
 {
  public:
@@ -31,10 +73,12 @@ class DotProdFunctor
   DotProdFunctor(
     Kokkos::View<double**> x,
     Kokkos::View<double**> y,
-    Kokkos::View<double*> dotProd)
+    Kokkos::View<double*> dotProd,
+    int teamsPerDot)
   : m_x(x),
     m_y(y),
     m_dotProd(dotProd),
+    m_teamsPerDot(teamsPerDot),
     m_nx(x.extent(0)),
     m_ny(x.extent(1))
   {
@@ -43,43 +87,59 @@ class DotProdFunctor
   KOKKOS_INLINE_FUNCTION
   void operator()(const member_t& member) const
   {
-    // inside team, compute dot product as a parallel reduce operation
-    double dot_prod = 0;
-    int j = member.league_rank();
+    // inside a team, compute dot product partial result as a parallel reduce operation
+    double partial_dot_prod = 0;
+    int teamId = member.league_rank();
+
+    // get column number
+    int j        = teamId / m_teamsPerDot;
+
+    // get the pieceId inside a given column
+    int pieceId   = teamId % m_teamsPerDot;
+    int pieceSize = m_x.extent(0) / m_teamsPerDot;
+
+    // get the line index begin/end
+    int begin     =  pieceId      * pieceSize;
+    int end       = (pieceId + 1) * pieceSize;
+
+    // the last piece might be slightly larger
+    if (pieceId == m_teamsPerDot - 1) end = m_x.extent(0);
 
     Kokkos::parallel_reduce(
-      Kokkos::TeamThreadRange(member, m_nx),
+      Kokkos::TeamThreadRange(member, begin, end),
       [&](const int &i, double &update)
       {
         update += m_x(i,j) * m_y(i,j);
       },
-      dot_prod);
-    // only one thread per team, collect the final reduction result, and write it
-    // the output view
-    Kokkos::single(Kokkos::PerTeam(member), [&]() { m_dotProd(j) = dot_prod; });
+      partial_dot_prod);
+    // only one thread per team will add (atomically) its partial result to the global results
+    // in the output view
+    // since multiple teams contribute to a given dot product, the partial results MUST be
+    // added using an atomic addition
+    Kokkos::single(Kokkos::PerTeam(member),
+                   [&]() { Kokkos::atomic_add(&m_dotProd(j), partial_dot_prod); });
 
-  }
+  } // operator()
 
   inline void run()
   {
 
-    // team size (number of threads per team)
-    const int team_size_max = DotProdFunctor::team_policy_t(m_ny, 1).team_size_max(
-      *this, Kokkos::ParallelForTag());
+    int nbTeams = m_teamsPerDot * m_ny;
 
-    //const team_policy_t policy(m_ny, team_size_max);
-    const team_policy_t policy(m_ny, Kokkos::AUTO(), Kokkos::AUTO());
+    // create a team policy for our functor
+    const team_policy_t policy(nbTeams, Kokkos::AUTO());
 
     Kokkos::parallel_for(
       "compute_dot_products_functor",
       policy,
       *this);
 
-  }
+  } // run
 
   Kokkos::View<double**> m_x;
   Kokkos::View<double**> m_y;
   Kokkos::View<double*>  m_dotProd;
+  int m_teamsPerDot;
   int m_nx, m_ny;
 
 }; // class DotProdFunctor
@@ -123,45 +183,59 @@ void batched_dot_product(int nx, int ny, int nrepeat, bool use_lambda)
       });
   }
 
+  // zeroing dotProd
+  Kokkos::deep_copy(dotProd, 0.0);
+
   // get prepared for TeamPolicy
   using team_policy_t = Kokkos::TeamPolicy<Kokkos::IndexType<int>>;
   using member_t = team_policy_t::member_type;
 
-  // number of teams is the number of dot product to perform
-  int nbTeams = ny;
+  int nbTeamsPerDot = computeNbTeamsPerDot(nx,ny);
+  printf("Using nbTeamsPerDot = %d\n",nbTeamsPerDot);
 
-  // create a team policy for lambda
-  const team_policy_t policy_lambda(nbTeams, Kokkos::AUTO(), Kokkos::AUTO());
+  int nbTeams = nbTeamsPerDot * ny;
+  printf("Using nbTeams = %d\n", nbTeams);
+
+  // create a team policy
+  const team_policy_t policy(nbTeams, Kokkos::AUTO());
 
   // define compute lambda
   auto dot_prod_lambda = KOKKOS_LAMBDA (const member_t& member)
     {
-      // inside team, compute dot product as a parallel reduce operation
-      double dot_prod = 0;
-      int j = member.league_rank();
+
+      // inside a team, compute dot product partial result as a parallel reduce operation
+      double partial_dot_prod = 0;
+      int teamId = member.league_rank();
+
+      // get column number
+      int j         = teamId / nbTeamsPerDot;
+
+      // get the pieceId inside a given column
+      int pieceId   = teamId % nbTeamsPerDot;
+      int pieceSize = nx / nbTeamsPerDot;
+
+      // get the line index begin/end
+      int begin     =  pieceId      * pieceSize;
+      int end       = (pieceId + 1) * pieceSize;
+
+      // the last piece might be slightly larger
+      if (pieceId == nbTeamsPerDot - 1) end = nx;
 
       Kokkos::parallel_reduce(
-        Kokkos::TeamThreadRange(member, nx),
+        Kokkos::TeamThreadRange(member, begin, end),
         [&](const int &i, double &update)
         {
           update += x(i,j) * y(i,j);
         },
-        dot_prod);
+        partial_dot_prod);
       // only one thread per team, collect the final reduction result, and write it
       // the output view
-     Kokkos::single(Kokkos::PerTeam(member), [&]() { dotProd(j) = dot_prod; });
+     Kokkos::single(Kokkos::PerTeam(member),
+                    [&]() { Kokkos::atomic_add(&dotProd(j), partial_dot_prod); });
     };
 
   // create functor to compute batched dot product
-  DotProdFunctor dot_prod_functor(x,y,dotProd);
-
-  // team size (number of threads per team) for functor version
-  const int team_size_max = team_policy_t(ny, 1).team_size_max(
-    dot_prod_functor, Kokkos::ParallelForTag());
-
-  // create a team policy for functor
-  //const team_policy_t policy_functor(ny, team_size_max);
-  const team_policy_t policy_functor(ny, Kokkos::AUTO(), Kokkos::AUTO());
+  DotProdFunctor dot_prod_functor(x,y,dotProd,nbTeamsPerDot);
 
   // Measure computation time
   Timer timer;
@@ -173,10 +247,10 @@ void batched_dot_product(int nx, int ny, int nrepeat, bool use_lambda)
     for(int k = 0; k < nrepeat; k++)
     {
       // Do batched dot product
-      // using hierarchical parallelism, one team per dot-product
+      // using hierarchical parallelism, multiple teams per dot-product
       Kokkos::parallel_for(
         "compute_dot_products_lambda",
-        policy_lambda,
+        policy,
         dot_prod_lambda);
     }
   }
@@ -185,10 +259,10 @@ void batched_dot_product(int nx, int ny, int nrepeat, bool use_lambda)
     for(int k = 0; k < nrepeat; k++)
     {
       // Do batched dot product
-      // using hierarchical parallelism, one team per dot-product
+      // using hierarchical parallelism, multiple teams per dot-product
       Kokkos::parallel_for(
         "compute_dot_products_functor",
-        policy_functor,
+        policy,
         dot_prod_functor);
 
       //dot_prod_functor.run();
