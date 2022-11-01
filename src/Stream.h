@@ -21,25 +21,23 @@ class Stream
 {
   public:
 
-    virtual ~Stream(){}
+  virtual ~Stream(){}
 
-    // Kernels
-    // These must be blocking calls
-    virtual void copy() = 0;
-    virtual void mul() = 0;
-    virtual void add() = 0;
-    virtual void triad() = 0;
-    virtual T dot() = 0;
+  // Kernels
+  // These must be blocking calls
+  virtual void copy() = 0;
+  virtual void mul() = 0;
+  virtual void add() = 0;
+  virtual void triad() = 0;
+  virtual T dot() = 0;
 
-    // Copy memory between host and device
-    virtual void init_arrays(T initA, T initB, T initC) = 0;
-    virtual void read_arrays(std::vector<T>& a, std::vector<T>& b, std::vector<T>& c) = 0;
+  // Copy memory between host and device
+  virtual void init_arrays(T initA, T initB, T initC) = 0;
+  virtual void read_arrays(std::vector<T>& a, std::vector<T>& b, std::vector<T>& c) = 0;
 
-};
-
+}; // class Stream
 
 // Implementation specific device functions
 void listDevices(void);
 std::string getDeviceName(const int);
 std::string getDeviceDriver(const int);
-
