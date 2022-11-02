@@ -1,4 +1,4 @@
-[*.{cpp,h,c,h,cuh,cu,F90,txt}]
+[*.{cpp,h,hpp,c,h,cuh,cu,F90,txt}]
 
 indent_style = space
 indent_size = 2
