@@ -508,7 +508,7 @@ void parseArguments(int argc, char *argv[])
     }
     else if (!std::string("--simd").compare(argv[i]))
     {
-#ifdef USE_SIMD_KOKOS
+#ifdef USE_SIMD_KOKKOS
       use_simd = true;
 #else
       use_simd = false;
