@@ -85,16 +85,16 @@ int main(int argc, char *argv[])
   // TODO: Fix Kokkos to allow multiple template specializations
   if (triad_only)
   {
-    if (use_float)
-      run_triad<float>();
-    else
+    // if (use_float)
+    //   run_triad<float>();
+    // else
       run_triad<double>();
   }
   else
   {
-    if (use_float)
-      run<float>();
-    else
+    // if (use_float)
+    //   run<float>();
+    // else
       run<double>();
   }
 

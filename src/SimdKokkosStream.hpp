@@ -70,12 +70,12 @@ public:
 }; // class SimdKokkosStream
 
 namespace Kokkos { //reduction identity must be defined in Kokkos namespace
-template<>
-struct reduction_identity< SimdKokkosStream<float>::simd_t > {
-  KOKKOS_FORCEINLINE_FUNCTION static SimdKokkosStream<float>::simd_t sum() {
-    return SimdKokkosStream<float>::simd_t(1.0f);
-  }
-};
+// template<>
+// struct reduction_identity< SimdKokkosStream<float>::simd_t > {
+//   KOKKOS_FORCEINLINE_FUNCTION static SimdKokkosStream<float>::simd_t sum() {
+//     return SimdKokkosStream<float>::simd_t(1.0f);
+//   }
+// };
 template<>
 struct reduction_identity< SimdKokkosStream<double>::simd_t > {
   KOKKOS_FORCEINLINE_FUNCTION static SimdKokkosStream<double>::simd_t sum() {
