@@ -11,7 +11,8 @@
 
 #include <Kokkos_Core.hpp>
 
-#include <simd.hpp>
+//#include <simd.hpp>
+#include <Kokkos_SIMD.hpp>
 
 #include "Stream.h"
 
@@ -27,13 +28,15 @@ public:
   unsigned int array_size_scalar;
   unsigned int array_size_vector;
 
-#ifdef KOKKOS_ENABLE_CUDA
-  using simd_t = typename simd::simd<T,simd::simd_abi::cuda_warp<32>>;
-#else
-  using simd_t = typename simd::simd<T,simd::simd_abi::native>;
-  //using simd_t = typename simd::simd<T,simd::simd_abi::pack<8>>;
-#endif
-  using simd_storage_t = typename simd_t::storage_type;
+  using simd_t      = typename Kokkos::Experimental::native_simd<T>;
+  using simd_mask_t = typename Kokkos::Experimental::native_simd_mask<T>;
+
+// #ifdef KOKKOS_ENABLE_CUDA
+//   using simd_t = typename simd::simd<T,simd::simd_abi::cuda_warp<32>>;
+// #else
+//   using simd_t = typename simd::simd<T,simd::simd_abi::native>;
+//   //using simd_t = typename simd::simd<T,simd::simd_abi::pack<8>>;
+// #endif
 
   using view_t = Kokkos::View<T*>;
   using mirror_view_t = typename view_t::HostMirror;
@@ -79,7 +82,7 @@ struct reduction_identity< SimdKokkosStream<double>::simd_t > {
     return SimdKokkosStream<double>::simd_t(1.0);
   }
 };
-}
+} // namespace Kokkos
 
 // ====================================================================
 // ====================================================================
@@ -89,12 +92,10 @@ struct SimdReducer {
  public:
 
   using simd_t = typename SimdKokkosStream<T>::simd_t;
-  using simd_storage_t = typename SimdKokkosStream<T>::simd_storage_t;
 
   // Required
   using reducer = SimdReducer<T, Space>;
   using value_type = simd_t;
-  using value_type_storage = simd_storage_t;
   using result_view_type = Kokkos::View<value_type, Space, Kokkos::MemoryUnmanaged>;
 
  private:
@@ -132,18 +133,22 @@ struct SimdReducer {
 
 template<class T, class simd_type>
 KOKKOS_INLINE_FUNCTION
-simd_type
-load(const T* ptr)
+bool
+load(const T* ptr, std::size_t n, simd_type& simd)
 {
-  return simd_type( ptr, simd::element_aligned_tag{} );
+  if (n < simd.size()) return false;
+  simd.copy_from( ptr, Kokkos::Experimental::element_aligned_tag() );
+  return true;
 }
 
 template<class T, class simd_type>
 KOKKOS_INLINE_FUNCTION
-void
-store( T* ptr, const simd_type& simd )
+bool
+store( T* ptr, std::size_t n, const simd_type& simd )
 {
-    simd.copy_to( ptr, simd::element_aligned_tag{} );
+  if (n < simd.size()) return false;
+  simd.copy_to( ptr, Kokkos::Experimental::element_aligned_tag() );
+  return true;
 }
 
 template <class T>
@@ -158,6 +163,7 @@ SimdKokkosStream<T>::SimdKokkosStream(
       hm_b(create_mirror_view(d_b)),
       hm_c(create_mirror_view(d_c))
 {
+  printf("SimdKokkosStream: simd_t::size = %ld\n",simd_t::size());
 }
 
 template <class T>
@@ -171,9 +177,9 @@ void SimdKokkosStream<T>::init_arrays(T initA, T initB, T initC)
   Kokkos::parallel_for(array_size_vector, KOKKOS_CLASS_LAMBDA (const long index)
   {
     const auto sindex = index*simd_t::size();
-    store( &d_a(sindex) , simd_t(initA));
-    store( &d_b(sindex) , simd_t(initB));
-    store( &d_c(sindex) , simd_t(initC));
+    store( &d_a(sindex) , simd_t::size(), simd_t(initA));
+    store( &d_b(sindex) , simd_t::size(), simd_t(initB));
+    store( &d_c(sindex) , simd_t::size(), simd_t(initC));
   });
   Kokkos::fence();
 }
@@ -197,12 +203,12 @@ void SimdKokkosStream<T>::read_arrays(
 template <class T>
 void SimdKokkosStream<T>::copy()
 {
-
   Kokkos::parallel_for(array_size_vector, KOKKOS_CLASS_LAMBDA (const long index)
   {
     const auto sindex = index*simd_t::size();
-    const auto value = load<T,simd_t>(&d_a(sindex));
-    store( &d_c(sindex), value);
+    simd_t value;
+    load(&d_a(sindex), simd_t::size(), value);
+    store(&d_c(sindex), simd_t::size(), value);
   });
   Kokkos::fence();
 }
@@ -215,8 +221,10 @@ void SimdKokkosStream<T>::mul()
   Kokkos::parallel_for(array_size_vector, KOKKOS_CLASS_LAMBDA (const long index)
   {
     const auto sindex = index*simd_t::size();
-    const auto value = scalar*load<T,simd_t>(&d_c(sindex));
-    store( &d_b(sindex), value);
+    simd_t value;
+    load(&d_c(sindex), simd_t::size(), value);
+    value *= scalar;
+    store(&d_b(sindex), simd_t::size(), value);
   });
   Kokkos::fence();
 }
@@ -227,8 +235,11 @@ void SimdKokkosStream<T>::add()
   Kokkos::parallel_for(array_size_vector, KOKKOS_CLASS_LAMBDA (const long index)
   {
     const auto sindex = index*simd_t::size();
-    const auto value = load<T,simd_t>(&d_a(sindex)) + load<T,simd_t>(&d_b(sindex));
-    store( &d_c(sindex), value);
+    simd_t value1, value2;
+    load(&d_a(sindex), simd_t::size(), value1);
+    load(&d_b(sindex), simd_t::size(), value2);
+    const auto value = value1 + value2;
+    store( &d_c(sindex), simd_t::size(), value);
   });
   Kokkos::fence();
 }
@@ -240,8 +251,11 @@ void SimdKokkosStream<T>::triad()
   Kokkos::parallel_for(array_size_vector, KOKKOS_CLASS_LAMBDA (const long index)
   {
     const auto sindex = index*simd_t::size();
-    const auto value = load<T,simd_t>(&d_b(sindex)) + scalar*load<T,simd_t>(&d_c(sindex));
-    store( &d_a(sindex), value);
+    simd_t value1, value2;
+    load(&d_b(sindex), simd_t::size(), value1);
+    load(&d_c(sindex), simd_t::size(), value2);
+    const auto value = value1 + scalar*value2;
+    store( &d_a(sindex), simd_t::size(), value);
   });
   Kokkos::fence();
 }
