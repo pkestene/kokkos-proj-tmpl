@@ -22,6 +22,14 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 option(USE_SIMD_KOKKOS "Should we enable simd from kokkos" OFF)
+option(USE_CBLAS_SERIAL "Should we use serial cblas for BatchedDotProduct benchmark ?" OFF)
+if (USE_CBLAS_SERIAL)
+  message(STATUS "Make sure to have openblas-serial installed.")
+  message(STATUS "To make sure openblas-serial will be selected use env variable CMAKE_PREFIX_PATH")
+  message(STATUS "e.g. CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openblas-serial")
+  set(BLA_VENDOR OpenBLAS)
+  find_package(BLAS)
+endif()
 
 #
 # sources
