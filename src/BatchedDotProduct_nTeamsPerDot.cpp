@@ -71,9 +71,9 @@ class DotProdFunctor
   using member_t = team_policy_t::member_type;
 
   DotProdFunctor(
-    Kokkos::View<double**> x,
-    Kokkos::View<double**> y,
-    Kokkos::View<double*> dotProd,
+    Kokkos::View<double**, Kokkos::LayoutLeft> x,
+    Kokkos::View<double**, Kokkos::LayoutLeft> y,
+    Kokkos::View<double*, Kokkos::LayoutLeft> dotProd,
     int teamsPerDot)
   : m_x(x),
     m_y(y),
@@ -136,9 +136,9 @@ class DotProdFunctor
 
   } // run
 
-  Kokkos::View<double**> m_x;
-  Kokkos::View<double**> m_y;
-  Kokkos::View<double*>  m_dotProd;
+  Kokkos::View<double**, Kokkos::LayoutLeft> m_x;
+  Kokkos::View<double**, Kokkos::LayoutLeft> m_y;
+  Kokkos::View<double*, Kokkos::LayoutLeft>  m_dotProd;
   int m_teamsPerDot;
   int m_nx, m_ny;
 
@@ -162,11 +162,11 @@ void batched_dot_product(int nx, int ny, int nrepeat, bool use_lambda)
 {
 
   // Allocate Views
-  Kokkos::View<double**> x("X", nx, ny);
-  Kokkos::View<double**> y("Y", nx, ny);
+  Kokkos::View<double**, Kokkos::LayoutLeft> x("X", nx, ny);
+  Kokkos::View<double**, Kokkos::LayoutLeft> y("Y", nx, ny);
 
   // vector of dot product, one per column, there are ny columns
-  Kokkos::View<double*>  dotProd("dot_prod", ny);
+  Kokkos::View<double*, Kokkos::LayoutLeft>  dotProd("dot_prod", ny);
 
   // Initialize arrays
   // first dot product should be near pi**2/6 ~ 1.64493 because
