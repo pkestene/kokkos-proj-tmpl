@@ -1,3 +1,0 @@
-[submodule "simd-math"]
-	path = external/simd-math
-	url = https://github.com/pkestene/simd-math
