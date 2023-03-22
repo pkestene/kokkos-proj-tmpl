@@ -57,8 +57,9 @@ add_subdirectory(src)
 
 ##################### PRINT CONFIGURE STATUS ######################
 message("//===================================================")
-message("  ${PROJECT_NAME} build configuration:")
+message("// ${PROJECT_NAME} build configuration:")
 message("//===================================================")
+message("")
 message("  C++ Compiler : ${CMAKE_CXX_COMPILER_ID} "
                          "${CMAKE_CXX_COMPILER_VERSION} "
                          "${CMAKE_CXX_COMPILER_WRAPPER}")
@@ -115,4 +116,7 @@ endif()
 
 message("  Kokkos architecture          = ${Kokkos_ARCH}")
 
+message("")
+message("  USE_SIMD_KOKKOS              = ${USE_SIMD_KOKKOS}")
+message("  USE_CBLAS_SERIAL             = ${USE_CBLAS_SERIAL}")
 message("")
