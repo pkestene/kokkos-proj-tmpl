@@ -20,29 +20,33 @@ git clone --recursive git@github.com:pkestene/kokkos-proj-tmpl.git
 ldd --version
 ```
 
-
-
 ### Build with target device OpenMP
+
+Default behavior is to download and build kokkos from source; thus you need to specifiy for which hardware target (aka Kokkos backend) you want
 
 ```bash
 mkdir build_openmp
 cd build_openmp
-CXX=YOUR_COMPILER_HERE cmake -DKokkos_ENABLE_OPENMP=ON ..
+CXX=YOUR_COMPILER_HERE cmake -DKOKKOS_PROJ_TMPL_BACKEND=OpenMP ..
 make
 # then you can run the application
 ./src/saxpy_kokkos_lambda.openmp
 ```
 
-Optionnally you can enable HWLOC by passing -DKokkos_ENABLE_HWLOC=ON on cmake's command line (or in ccmake curse gui).
+Note that option `-DKokkos_ENABLE_HWLOC=ON` is enabled by default.
+
+If you already have build and installed kokkos for some target backend (OpenMP, Cuda, HIP, etc...), you don't need to specify cmake option `KOKKOS_PROJ_TMPL_BACKEND`, it will determine by the build system but of course you need to set env variable `CMAKE_PREFIX_PATH` to the directory containing file `KokkosConfig.cmake` inside your kokkos installation.
 
 ### Build with target device CUDA
+
+You need to have Nvidia compiler `nvcc` in your PATH.
 
 CMake and Kokkos will set the compiler to `nvcc_wrapper` (located in kokkos sources, cloned as git submodule).
 
 ```bash
 mkdir build_cuda
 cd build_cuda
-cmake -DKokkos_ENABLE_CUDA=ON -DKokkos_ENABLE_CUDA_LAMBDA=ON -DKokkos_ARCH_MAXWELL50=ON ..
+cmake -DKOKKOS_PROJ_TMPL_BACKEND=Cuda -DKokkos_ARCH_MAXWELL50=ON ..
 make
 # then you can run the application as before
 ./src/saxpy_kokkos_lambda.cuda
@@ -60,7 +64,7 @@ Example:
 ```bash
 mkdir build_hip
 cd build_hip
-cmake -DKokkos_ENABLE_HIP=ON -DKokkos_ARCH_VEGA908=ON ..
+cmake -DKOKKOS_PROJ_TMPL_BACKEND=HIP -DKokkos_ARCH_VEGA908=ON ..
 make
 # then you can run the application as before
 ./src/saxpy_kokkos_lambda.hip

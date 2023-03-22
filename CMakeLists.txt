@@ -45,8 +45,9 @@ endif()
 # sources
 #
 
-# first build kokkos
-add_subdirectory(external/kokkos)
+# configure kokkos
+#add_subdirectory(external/kokkos)
+include(cmake/build_or_find_kokkos.cmake)
 
 # pass Kokkos include directories to our target application
 include_directories(${Kokkos_INCLUDE_DIRS_RET})
@@ -62,18 +63,56 @@ message("  C++ Compiler : ${CMAKE_CXX_COMPILER_ID} "
                          "${CMAKE_CXX_COMPILER_VERSION} "
                          "${CMAKE_CXX_COMPILER_WRAPPER}")
 message("                 ${CMAKE_CXX_COMPILER}")
-message("  Kokkos_ENABLE_OPENMP = ${Kokkos_ENABLE_OPENMP}")
-message("  Kokkos_ENABLE_CUDA   = ${Kokkos_ENABLE_CUDA}")
-if (Kokkos_ENABLE_CUDA)
-  message("  Kokkos_ENABLE_CUDA_LAMBDA    = ${Kokkos_ENABLE_CUDA_LAMBDA}")
-  message("  Kokkos_ENABLE_CUDA_CONSTEXPR = ${Kokkos_ENABLE_CUDA_CONSTEXPR}")
-  message("  Kokkos_ENABLE_CUDA_UVM       = ${Kokkos_ENABLE_CUDA_UVM}")
-  message("  Kokkos CUDA   flags          = ${KOKKOS_CUDA_OPTIONS}")
-endif(Kokkos_ENABLE_CUDA)
-message("  Kokkos_ENABLE_HWLOC  = ${Kokkos_ENABLE_HWLOC}")
 
-if (Kokkos_ENABLE_CUDA)
-  message("  CUDA Compiler      : ${CMAKE_CUDA_COMPILER}")
-  message("  CUDA Compiler exec : ${CUDA_NVCC_EXECUTABLE}")
-  message("  CUDA Compile flags : ${CUDA_NVCC_FLAGS}")
+message("  Kokkos version               = ${Kokkos_VERSION}")
+message("  Kokkos_CXX_COMPILER          = ${Kokkos_CXX_COMPILER}")
+message("  Kokkos_CXX_COMPILER_ID       = ${Kokkos_CXX_COMPILER_ID}")
+message("  Kokkos_CXX_STANDARD          = ${Kokkos_CXX_STANDARD}")
+message("  Kokkos_OPTIONS               = ${Kokkos_OPTIONS}")
+message("  Kokkos_TPLS                  = ${Kokkos_TPLS}")
+message("  Kokkos_DIRS                  = ${Kokkos_DIR}")
+
+if(Kokkos_ENABLE_OPENMP)
+  message("  Kokkos_ENABLE_OPENMP         = ${Kokkos_ENABLE_OPENMP}")
+endif()
+
+if(Kokkos_ENABLE_CUDA)
+  message("  Kokkos_ENABLE_CUDA           = ${Kokkos_ENABLE_CUDA}")
+
+  if( (${Kokkos_CUDA_LAMBDA_ENABLED}) OR (${Kokkos_ENABLE_CUDA_LAMBDA}))
+    message("  Kokkos_ENABLE_CUDA_LAMBDA    = ON")
+  else()
+    message("  Kokkos_ENABLE_CUDA_LAMBDA    = OFF")
+  endif()
+
+  if( (${Kokkos_CUDA_CONSTEXPR_ENABLED}) OR (${Kokkos_ENABLE_CUDA_CONSTEXPR}))
+    message("  Kokkos_ENABLE_CUDA_CONSTEXPR = ON")
+  else()
+    message("  Kokkos_ENABLE_CUDA_CONSTEXPR = OFF")
+  endif()
+
+  if( (${Kokkos_CUDA_UVM_ENABLED}) OR (${Kokkos_ENABLE_CUDA_UVM}))
+    message("  Kokkos_ENABLE_CUDA_UVM       = ON")
+  else()
+    message("  Kokkos_ENABLE_CUDA_UVM       = OFF")
+  endif()
+
+  message("  Kokkos CUDA   flags          = ${KOKKOS_CUDA_OPTIONS}")
+  #message("  CUDA Compiler      : ${CMAKE_CUDA_COMPILER}")
+  #message("  CUDA Compiler exec : ${CUDA_NVCC_EXECUTABLE}")
+  #message("  CUDA Compile flags : ${CUDA_NVCC_FLAGS}")
 endif(Kokkos_ENABLE_CUDA)
+
+if(Kokkos_ENABLE_HIP)
+  message("  Kokkos_ENABLE_HIP            = ${Kokkos_ENABLE_HIP}")
+endif(Kokkos_ENABLE_HIP)
+
+if ( (${Kokkos_TPLS_HWLOC_ENABLED}) OR (${Kokkos_ENABLE_HWLOC}) )
+  message("  Kokkos_ENABLE_HWLOC          = ON")
+else()
+  message("  Kokkos_ENABLE_HWLOC          = OFF")
+endif()
+
+message("  Kokkos architecture          = ${Kokkos_ARCH}")
+
+message("")
