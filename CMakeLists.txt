@@ -46,11 +46,7 @@ endif()
 #
 
 # configure kokkos
-#add_subdirectory(external/kokkos)
 include(cmake/build_or_find_kokkos.cmake)
-
-# pass Kokkos include directories to our target application
-include_directories(${Kokkos_INCLUDE_DIRS_RET})
 
 # build the miniapp
 add_subdirectory(src)

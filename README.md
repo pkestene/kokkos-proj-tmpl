@@ -1,4 +1,5 @@
 # kokkos-proj-tmpl
+
 A minimal cmake based project skeleton for developping a kokkos application
 
 ## Download this skeleton
@@ -25,9 +26,9 @@ ldd --version
 Default behavior is to download and build kokkos from source; thus you need to specifiy for which hardware target (aka Kokkos backend) you want
 
 ```bash
-mkdir build_openmp
-cd build_openmp
-CXX=YOUR_COMPILER_HERE cmake -DKOKKOS_PROJ_TMPL_BACKEND=OpenMP ..
+mkdir -p build/openmp
+cd build/openmp
+CXX=YOUR_COMPILER_HERE cmake -DKOKKOS_PROJ_TMPL_BACKEND=OpenMP ../..
 make
 # then you can run the application
 ./src/saxpy_kokkos_lambda.openmp
@@ -44,9 +45,9 @@ You need to have Nvidia compiler `nvcc` in your PATH.
 CMake and Kokkos will set the compiler to `nvcc_wrapper` (located in kokkos sources, cloned as git submodule).
 
 ```bash
-mkdir build_cuda
-cd build_cuda
-cmake -DKOKKOS_PROJ_TMPL_BACKEND=Cuda -DKokkos_ARCH_MAXWELL50=ON ..
+mkdir -p build/cuda
+cd build/cuda
+cmake -DKOKKOS_PROJ_TMPL_BACKEND=Cuda -DKokkos_ARCH_AMPERE86=ON ../..
 make
 # then you can run the application as before
 ./src/saxpy_kokkos_lambda.cuda
