@@ -8,19 +8,22 @@
 #include "KokkosStream.hpp"
 
 
-void listDevices(void)
+void
+listDevices(void)
 {
   std::cout << "Kokkos library for " << getDeviceName(0) << std::endl;
 }
 
 
-std::string getDeviceName(const int device)
+std::string
+getDeviceName(const int device)
 {
-  return typeid (Kokkos::DefaultExecutionSpace).name();
+  return typeid(Kokkos::DefaultExecutionSpace).name();
 }
 
 
-std::string getDeviceDriver(const int device)
+std::string
+getDeviceDriver(const int device)
 {
   return "Kokkos";
 }

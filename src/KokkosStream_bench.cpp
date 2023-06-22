@@ -21,32 +21,41 @@
 
 #include "KokkosStream.hpp"
 #ifdef USE_SIMD_KOKKOS
-#include "SimdKokkosStream.hpp"
+#  include "SimdKokkosStream.hpp"
 #endif
 
 // Default size of 2^25
-//unsigned int ARRAY_SIZE = 33554432;
-unsigned int ARRAY_SIZE = 1<<25;
+// unsigned int ARRAY_SIZE = 33554432;
+unsigned int ARRAY_SIZE = 1 << 25;
 unsigned int num_times = 100;
 unsigned int deviceIndex = 0;
-bool use_float = false;
-bool triad_only = false;
-bool output_as_csv = false;
-std::string csv_separator = ",";
-bool use_simd = false;
+bool         use_float = false;
+bool         triad_only = false;
+bool         output_as_csv = false;
+std::string  csv_separator = ",";
+bool         use_simd = false;
 
 template <typename T>
-void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum);
+void
+check_solution(const unsigned int ntimes,
+               std::vector<T> &   a,
+               std::vector<T> &   b,
+               std::vector<T> &   c,
+               T &                sum);
 
 template <typename T>
-void run();
+void
+run();
 
 template <typename T>
-void run_triad();
+void
+run_triad();
 
-void parseArguments(int argc, char *argv[]);
+void
+parseArguments(int argc, char * argv[]);
 
-int main(int argc, char *argv[])
+int
+main(int argc, char * argv[])
 {
 
   parseArguments(argc, argv);
@@ -57,14 +66,13 @@ int main(int argc, char *argv[])
     std::cout << "##########################\n";
     std::ostringstream msg;
     std::cout << "Kokkos configuration" << std::endl;
-    if ( Kokkos::hwloc::available() ) {
-      msg << "hwloc( NUMA[" << Kokkos::hwloc::get_available_numa_count()
-          << "] x CORE["    << Kokkos::hwloc::get_available_cores_per_numa()
-          << "] x HT["      << Kokkos::hwloc::get_available_threads_per_core()
-          << "] )"
-          << std::endl ;
+    if (Kokkos::hwloc::available())
+    {
+      msg << "hwloc( NUMA[" << Kokkos::hwloc::get_available_numa_count() << "] x CORE["
+          << Kokkos::hwloc::get_available_cores_per_numa() << "] x HT["
+          << Kokkos::hwloc::get_available_threads_per_core() << "] )" << std::endl;
     }
-    Kokkos::print_configuration( msg );
+    Kokkos::print_configuration(msg);
     std::cout << msg.str();
     std::cout << "##########################\n";
   }
@@ -76,10 +84,9 @@ int main(int argc, char *argv[])
 #else
     std::string implemStr = "Kokkos";
 #endif
-    std::cout
-      << "BabelStream" << std::endl
-      << "Version: " << VERSION_STRING << std::endl
-      << "Implementation: " << implemStr << std::endl;
+    std::cout << "BabelStream" << std::endl
+              << "Version: " << VERSION_STRING << std::endl
+              << "Implementation: " << implemStr << std::endl;
   }
 
   // TODO: Fix Kokkos to allow multiple template specializations
@@ -88,20 +95,20 @@ int main(int argc, char *argv[])
     // if (use_float)
     //   run_triad<float>();
     // else
-      run_triad<double>();
+    run_triad<double>();
   }
   else
   {
     // if (use_float)
     //   run<float>();
     // else
-      run<double>();
+    run<double>();
   }
-
 }
 
 template <typename T>
-void run()
+void
+run()
 {
   std::streamsize ss = std::cout.precision();
 
@@ -116,12 +123,11 @@ void run()
 
 
     std::cout << std::setprecision(1) << std::fixed
-              << "Array size: " << ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB"
-              << " (=" << ARRAY_SIZE*sizeof(T)*1.0E-9 << " GB)" << std::endl;
-    std::cout << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB"
-              << " (=" << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-9 << " GB)" << std::endl;
+              << "Array size: " << ARRAY_SIZE * sizeof(T) * 1.0E-6 << " MB"
+              << " (=" << ARRAY_SIZE * sizeof(T) * 1.0E-9 << " GB)" << std::endl;
+    std::cout << "Total size: " << 3.0 * ARRAY_SIZE * sizeof(T) * 1.0E-6 << " MB"
+              << " (=" << 3.0 * ARRAY_SIZE * sizeof(T) * 1.0E-9 << " GB)" << std::endl;
     std::cout.precision(ss);
-
   }
 
   // Create host vectors
@@ -132,11 +138,11 @@ void run()
   // Result of the Dot kernel
   T sum;
 
-  Stream<T> *stream;
+  Stream<T> * stream;
 
   // Use the Kokkos implementation
 #ifdef USE_SIMD_KOKKOS
-  if(use_simd)
+  if (use_simd)
     stream = new SimdKokkosStream<T>(ARRAY_SIZE, deviceIndex);
   else
     stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
@@ -159,32 +165,36 @@ void run()
     t1 = std::chrono::high_resolution_clock::now();
     stream->copy();
     t2 = std::chrono::high_resolution_clock::now();
-    timings[0].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    timings[0].push_back(
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count());
 
     // Execute Mul
     t1 = std::chrono::high_resolution_clock::now();
     stream->mul();
     t2 = std::chrono::high_resolution_clock::now();
-    timings[1].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    timings[1].push_back(
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count());
 
     // Execute Add
     t1 = std::chrono::high_resolution_clock::now();
     stream->add();
     t2 = std::chrono::high_resolution_clock::now();
-    timings[2].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    timings[2].push_back(
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count());
 
     // Execute Triad
     t1 = std::chrono::high_resolution_clock::now();
     stream->triad();
     t2 = std::chrono::high_resolution_clock::now();
-    timings[3].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
+    timings[3].push_back(
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count());
 
     // Execute Dot
     t1 = std::chrono::high_resolution_clock::now();
     sum = stream->dot();
     t2 = std::chrono::high_resolution_clock::now();
-    timings[4].push_back(std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count());
-
+    timings[4].push_back(
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count());
   }
 
   // Check solutions
@@ -194,79 +204,60 @@ void run()
   // Display timing results
   if (output_as_csv)
   {
-    std::cout
-      << "function" << csv_separator
-      << "num_times" << csv_separator
-      << "n_elements" << csv_separator
-      << "sizeof" << csv_separator
-      << "max_mbytes_per_sec" << csv_separator
-      << "min_runtime" << csv_separator
-      << "max_runtime" << csv_separator
-      << "avg_runtime" << std::endl;
+    std::cout << "function" << csv_separator << "num_times" << csv_separator << "n_elements"
+              << csv_separator << "sizeof" << csv_separator << "max_mbytes_per_sec" << csv_separator
+              << "min_runtime" << csv_separator << "max_runtime" << csv_separator << "avg_runtime"
+              << std::endl;
   }
   else
   {
-    std::cout
-      << std::left << std::setw(12) << "Function"
-      << std::left << std::setw(12) << "MBytes/sec"
-      << std::left << std::setw(12) << "Min (sec)"
-      << std::left << std::setw(12) << "Max"
-      << std::left << std::setw(12) << "Average"
-      << std::endl
-      << std::fixed;
+    std::cout << std::left << std::setw(12) << "Function" << std::left << std::setw(12)
+              << "MBytes/sec" << std::left << std::setw(12) << "Min (sec)" << std::left
+              << std::setw(12) << "Max" << std::left << std::setw(12) << "Average" << std::endl
+              << std::fixed;
   }
 
 
-
-  std::string labels[5] = {"Copy", "Mul", "Add", "Triad", "Dot"};
-  size_t sizes[5] = {
-    2 * sizeof(T) * ARRAY_SIZE,
-    2 * sizeof(T) * ARRAY_SIZE,
-    3 * sizeof(T) * ARRAY_SIZE,
-    3 * sizeof(T) * ARRAY_SIZE,
-    2 * sizeof(T) * ARRAY_SIZE
-  };
+  std::string labels[5] = { "Copy", "Mul", "Add", "Triad", "Dot" };
+  size_t      sizes[5] = { 2 * sizeof(T) * ARRAY_SIZE,
+                           2 * sizeof(T) * ARRAY_SIZE,
+                           3 * sizeof(T) * ARRAY_SIZE,
+                           3 * sizeof(T) * ARRAY_SIZE,
+                           2 * sizeof(T) * ARRAY_SIZE };
 
   for (int i = 0; i < 5; i++)
   {
     // Get min/max; ignore the first result
-    auto minmax = std::minmax_element(timings[i].begin()+1, timings[i].end());
+    auto minmax = std::minmax_element(timings[i].begin() + 1, timings[i].end());
 
     // Calculate average; ignore the first result
-    double average = std::accumulate(timings[i].begin()+1, timings[i].end(), 0.0) / (double)(num_times - 1);
+    double average =
+      std::accumulate(timings[i].begin() + 1, timings[i].end(), 0.0) / (double)(num_times - 1);
 
     // Display results
     if (output_as_csv)
     {
-      std::cout
-        << labels[i] << csv_separator
-        << num_times << csv_separator
-        << ARRAY_SIZE << csv_separator
-        << sizeof(T) << csv_separator
-        << 1.0E-6 * sizes[i] / (*minmax.first) << csv_separator
-        << *minmax.first << csv_separator
-        << *minmax.second << csv_separator
-        << average
-        << std::endl;
+      std::cout << labels[i] << csv_separator << num_times << csv_separator << ARRAY_SIZE
+                << csv_separator << sizeof(T) << csv_separator
+                << 1.0E-6 * sizes[i] / (*minmax.first) << csv_separator << *minmax.first
+                << csv_separator << *minmax.second << csv_separator << average << std::endl;
     }
     else
     {
-      std::cout
-        << std::left << std::setw(12) << labels[i]
-        << std::left << std::setw(12) << std::setprecision(3) << 1.0E-6 * sizes[i] / (*minmax.first)
-        << std::left << std::setw(12) << std::setprecision(5) << *minmax.first
-        << std::left << std::setw(12) << std::setprecision(5) << *minmax.second
-        << std::left << std::setw(12) << std::setprecision(5) << average
-        << std::endl;
+      std::cout << std::left << std::setw(12) << labels[i] << std::left << std::setw(12)
+                << std::setprecision(3) << 1.0E-6 * sizes[i] / (*minmax.first) << std::left
+                << std::setw(12) << std::setprecision(5) << *minmax.first << std::left
+                << std::setw(12) << std::setprecision(5) << *minmax.second << std::left
+                << std::setw(12) << std::setprecision(5) << average << std::endl;
     }
   }
 
   delete stream;
-
 }
 
 template <typename T>
-void run_triad()
+void
+run_triad()
 {
 
   if (!output_as_csv)
@@ -281,10 +272,10 @@ void run_triad()
 
     std::streamsize ss = std::cout.precision();
     std::cout << std::setprecision(1) << std::fixed
-      << "Array size: " << ARRAY_SIZE*sizeof(T)*1.0E-3 << " KB"
-      << " (=" << ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB)" << std::endl;
-    std::cout << "Total size: " << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-3 << " KB"
-      << " (=" << 3.0*ARRAY_SIZE*sizeof(T)*1.0E-6 << " MB)" << std::endl;
+              << "Array size: " << ARRAY_SIZE * sizeof(T) * 1.0E-3 << " KB"
+              << " (=" << ARRAY_SIZE * sizeof(T) * 1.0E-6 << " MB)" << std::endl;
+    std::cout << "Total size: " << 3.0 * ARRAY_SIZE * sizeof(T) * 1.0E-3 << " KB"
+              << " (=" << 3.0 * ARRAY_SIZE * sizeof(T) * 1.0E-6 << " MB)" << std::endl;
     std::cout.precision(ss);
   }
 
@@ -293,7 +284,7 @@ void run_triad()
   std::vector<T> b(ARRAY_SIZE);
   std::vector<T> c(ARRAY_SIZE);
 
-  Stream<T> *stream;
+  Stream<T> * stream;
 
 #if defined(CUDA)
   // Use the CUDA implementation
@@ -313,14 +304,14 @@ void run_triad()
 
 #elif defined(KOKKOS_VERSION)
   // Use the Kokkos implementation
-#ifdef USE_SIMD_KOKKOS
-  if(use_simd)
+#  ifdef USE_SIMD_KOKKOS
+  if (use_simd)
     stream = new SimdKokkosStream<T>(ARRAY_SIZE, deviceIndex);
   else
     stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
-#else
+#  else
   stream = new KokkosStream<T>(ARRAY_SIZE, deviceIndex);
-#endif
+#  endif
 
 #elif defined(ACC)
   // Use the OpenACC implementation
@@ -349,7 +340,7 @@ void run_triad()
   }
   t2 = std::chrono::high_resolution_clock::now();
 
-  double runtime = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+  double runtime = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 
   // Check solutions
   T sum = 0.0;
@@ -361,39 +352,32 @@ void run_triad()
   double bandwidth = 1.0E-9 * (total_bytes / runtime);
   if (output_as_csv)
   {
-    std::cout
-      << "function" << csv_separator
-      << "num_times" << csv_separator
-      << "n_elements" << csv_separator
-      << "sizeof" << csv_separator
-      << "gbytes_per_sec" << csv_separator
-      << "runtime"
-      << std::endl;
-    std::cout
-      << "Triad" << csv_separator
-      << num_times << csv_separator
-      << ARRAY_SIZE << csv_separator
-      << sizeof(T) << csv_separator
-      << bandwidth << csv_separator
-      << runtime
-      << std::endl;
+    std::cout << "function" << csv_separator << "num_times" << csv_separator << "n_elements"
+              << csv_separator << "sizeof" << csv_separator << "gbytes_per_sec" << csv_separator
+              << "runtime" << std::endl;
+    std::cout << "Triad" << csv_separator << num_times << csv_separator << ARRAY_SIZE
+              << csv_separator << sizeof(T) << csv_separator << bandwidth << csv_separator
+              << runtime << std::endl;
   }
   else
   {
-    std::cout
-      << "--------------------------------"
-      << std::endl << std::fixed
-      << "Runtime (seconds): " << std::left << std::setprecision(5)
-      << runtime << std::endl
-      << "Bandwidth (GB/s):  " << std::left << std::setprecision(3)
-      << bandwidth << std::endl;
+    std::cout << "--------------------------------" << std::endl
+              << std::fixed << "Runtime (seconds): " << std::left << std::setprecision(5) << runtime
+              << std::endl
+              << "Bandwidth (GB/s):  " << std::left << std::setprecision(3) << bandwidth
+              << std::endl;
   }
 
   delete stream;
 }
 
 template <typename T>
-void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>& b, std::vector<T>& c, T& sum)
+void
+check_solution(const unsigned int ntimes,
+               std::vector<T> &   a,
+               std::vector<T> &   b,
+               std::vector<T> &   c,
+               T &                sum)
 {
   // Generate correct solution
   T goldA = startA;
@@ -419,46 +403,42 @@ void check_solution(const unsigned int ntimes, std::vector<T>& a, std::vector<T>
   goldSum = goldA * goldB * ARRAY_SIZE;
 
   // Calculate the average error
-  double errA = std::accumulate(a.begin(), a.end(), 0.0, [&](double sum, const T val){ return sum + fabs(val - goldA); });
+  double errA = std::accumulate(
+    a.begin(), a.end(), 0.0, [&](double sum, const T val) { return sum + fabs(val - goldA); });
   errA /= a.size();
-  double errB = std::accumulate(b.begin(), b.end(), 0.0, [&](double sum, const T val){ return sum + fabs(val - goldB); });
+  double errB = std::accumulate(
+    b.begin(), b.end(), 0.0, [&](double sum, const T val) { return sum + fabs(val - goldB); });
   errB /= b.size();
-  double errC = std::accumulate(c.begin(), c.end(), 0.0, [&](double sum, const T val){ return sum + fabs(val - goldC); });
+  double errC = std::accumulate(
+    c.begin(), c.end(), 0.0, [&](double sum, const T val) { return sum + fabs(val - goldC); });
   errC /= c.size();
   double errSum = fabs(sum - goldSum);
 
   double epsi = std::numeric_limits<T>::epsilon() * 100.0;
 
   if (errA > epsi)
-    std::cerr
-      << "Validation failed on a[]. Average error " << errA
-      << std::endl;
+    std::cerr << "Validation failed on a[]. Average error " << errA << std::endl;
   if (errB > epsi)
-    std::cerr
-      << "Validation failed on b[]. Average error " << errB
-      << std::endl;
+    std::cerr << "Validation failed on b[]. Average error " << errB << std::endl;
   if (errC > epsi)
-    std::cerr
-      << "Validation failed on c[]. Average error " << errC
-      << std::endl;
+    std::cerr << "Validation failed on c[]. Average error " << errC << std::endl;
   // Check sum to 8 decimal places
   if (!triad_only && errSum > 1.0E-8)
-    std::cerr
-      << "Validation failed on sum. Error " << errSum
-      << std::endl << std::setprecision(15)
-      << "Sum was " << sum << " but should be " << goldSum
-      << std::endl;
-
+    std::cerr << "Validation failed on sum. Error " << errSum << std::endl
+              << std::setprecision(15) << "Sum was " << sum << " but should be " << goldSum
+              << std::endl;
 }
 
-int parseUInt(const char *str, unsigned int *output)
+int
+parseUInt(const char * str, unsigned int * output)
 {
-  char *next;
+  char * next;
   *output = strtoul(str, &next, 10);
   return !strlen(next);
 }
 
-void parseArguments(int argc, char *argv[])
+void
+parseArguments(int argc, char * argv[])
 {
   for (int i = 1; i < argc; i++)
   {
@@ -475,8 +455,7 @@ void parseArguments(int argc, char *argv[])
         exit(EXIT_FAILURE);
       }
     }
-    else if (!std::string("--arraysize").compare(argv[i]) ||
-             !std::string("-s").compare(argv[i]))
+    else if (!std::string("--arraysize").compare(argv[i]) || !std::string("-s").compare(argv[i]))
     {
       if (++i >= argc || !parseUInt(argv[i], &ARRAY_SIZE))
       {
@@ -484,8 +463,7 @@ void parseArguments(int argc, char *argv[])
         exit(EXIT_FAILURE);
       }
     }
-    else if (!std::string("--numtimes").compare(argv[i]) ||
-             !std::string("-n").compare(argv[i]))
+    else if (!std::string("--numtimes").compare(argv[i]) || !std::string("-n").compare(argv[i]))
     {
       if (++i >= argc || !parseUInt(argv[i], &num_times))
       {
@@ -519,8 +497,7 @@ void parseArguments(int argc, char *argv[])
     {
       output_as_csv = true;
     }
-    else if (!std::string("--help").compare(argv[i]) ||
-             !std::string("-h").compare(argv[i]))
+    else if (!std::string("--help").compare(argv[i]) || !std::string("-h").compare(argv[i]))
     {
       std::cout << std::endl;
       std::cout << "Usage: " << argv[0] << " [OPTIONS]" << std::endl << std::endl;
@@ -539,8 +516,7 @@ void parseArguments(int argc, char *argv[])
     }
     else
     {
-      std::cerr << "Unrecognized argument '" << argv[i] << "' (try '--help')"
-                << std::endl;
+      std::cerr << "Unrecognized argument '" << argv[i] << "' (try '--help')" << std::endl;
       exit(EXIT_FAILURE);
     }
   }

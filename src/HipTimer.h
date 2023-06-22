@@ -18,39 +18,49 @@ class HipTimer
 {
 protected:
   hipEvent_t startEv, stopEv;
-  double total_time;
+  double     total_time;
 
 public:
-  HipTimer() {
+  HipTimer()
+  {
     hipEventCreate(&startEv);
     hipEventCreate(&stopEv);
     total_time = 0.0;
   }
 
-  ~HipTimer() {
+  ~HipTimer()
+  {
     hipEventDestroy(startEv);
     hipEventDestroy(stopEv);
   }
 
-  void start() {
+  void
+  start()
+  {
     hipEventRecord(startEv, 0);
   }
 
-  void reset() {
+  void
+  reset()
+  {
     total_time = 0.0;
   }
 
   /** stop timer and accumulate time in seconds */
-  void stop() {
+  void
+  stop()
+  {
     float gpuTime;
     hipEventRecord(stopEv, 0);
     hipEventSynchronize(stopEv);
     hipEventElapsedTime(&gpuTime, startEv, stopEv);
-    total_time += (double)1e-3*gpuTime;
+    total_time += (double)1e-3 * gpuTime;
   }
 
   /** return elapsed time in seconds (as record in total_time) */
-  double elapsed() const {
+  double
+  elapsed() const
+  {
     return total_time;
   }
 

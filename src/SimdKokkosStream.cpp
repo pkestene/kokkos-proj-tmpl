@@ -8,5 +8,5 @@
 #include "SimdKokkosStream.hpp"
 
 
-//template class SimdKokkosStream<float>;
+// template class SimdKokkosStream<float>;
 template class SimdKokkosStream<double>;
