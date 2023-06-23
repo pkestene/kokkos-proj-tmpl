@@ -54,21 +54,26 @@ protected:
 
 public:
   SimdKokkosStream(const unsigned int, const int);
-  ~SimdKokkosStream();
+  ~SimdKokkosStream() = default;
 
   virtual void
   copy() override;
+
   virtual void
   add() override;
+
   virtual void
   mul() override;
+
   virtual void
   triad() override;
+
   virtual T
   dot() override;
 
   virtual void
   init_arrays(T initA, T initB, T initC) override;
+
   virtual void
   read_arrays(std::vector<T> & a, std::vector<T> & b, std::vector<T> & c) override;
 
@@ -120,13 +125,6 @@ public:
   KOKKOS_INLINE_FUNCTION
   void
   join(value_type & dest, const value_type & src) const
-  {
-    dest = dest + src;
-  }
-
-  KOKKOS_INLINE_FUNCTION
-  void
-  join(volatile value_type & dest, const volatile value_type & src) const
   {
     dest += src;
   }
@@ -193,10 +191,6 @@ SimdKokkosStream<T>::SimdKokkosStream(const unsigned int ARRAY_SIZE, const int d
 {
   printf("SimdKokkosStream: simd_t::size = %ld\n", simd_t::size());
 }
-
-template <class T>
-SimdKokkosStream<T>::~SimdKokkosStream()
-{}
 
 template <class T>
 void
@@ -299,25 +293,25 @@ SimdKokkosStream<T>::dot()
 
   // This is still buggy when simd_t is simd_abi::native, but ok whi simd_abi::pack
 
-  // simd_t sum = simd_t(0.0);
+  simd_t sum = simd_t(0.0);
 
-  // using SimdReducerResult = SimdReducer<T, Kokkos::DefaultExecutionSpace>;
+  using SimdReducerResult = SimdReducer<T, Kokkos::DefaultExecutionSpace>;
 
-  // Kokkos::parallel_reduce(array_size_vector, KOKKOS_LAMBDA (const long index, simd_t &tmp)
-  // {
-  //   const auto sindex = index*simd_t::size();
-  //   const auto val = load<T,simd_t>(&d_a(sindex)) * load<T,simd_t>(&d_b(sindex));
-  //   tmp = tmp + val;
-  // }, SimdReducerResult(sum));
+  Kokkos::parallel_reduce(
+    array_size_vector,
+    KOKKOS_CLASS_LAMBDA(const long index, simd_t & tmp) {
+      const auto sindex = index * simd_t::size();
+      simd_t     value1, value2;
+      load(&d_a(sindex), simd_t::size(), value1);
+      load(&d_b(sindex), simd_t::size(), value2);
+      // const auto val = load<T, simd_t>(&d_a(sindex)) * load<T, simd_t>(&d_b(sindex));
+      tmp = tmp + value1 * value2;
+    },
+    SimdReducerResult(sum));
 
-  // auto res_view = Kokkos::View<T*, Kokkos::HostSpace>( "res", simd_t::size() );
-  // store(res_view.data(), sum);
-
-  // // final horizontal reduction (should be done with simd operator)
-  // T res=0;
-  // for (int i = 0; i<simd_t::size(); ++i)
-  //   res+=res_view(i);
-  // return res;
-
-  return 0;
+  // final horizontal reduction (should be done with simd operator)
+  T res = 0;
+  for (int i = 0; i < simd_t::size(); ++i)
+    res += sum[i];
+  return res;
 }

@@ -35,16 +35,21 @@ protected:
 
 public:
   KokkosStream(const unsigned int, const int);
-  ~KokkosStream();
+
+  ~KokkosStream() = default;
 
   virtual void
   copy() override;
+
   virtual void
   add() override;
+
   virtual void
   mul() override;
+
   virtual void
   triad() override;
+
   virtual T
   dot() override;
 
@@ -64,10 +69,6 @@ KokkosStream<T>::KokkosStream(const unsigned int ARRAY_SIZE, const int device_in
   , hm_a(create_mirror_view(d_a))
   , hm_b(create_mirror_view(d_b))
   , hm_c(create_mirror_view(d_c))
-{}
-
-template <class T>
-KokkosStream<T>::~KokkosStream()
 {}
 
 template <class T>

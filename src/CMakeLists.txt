@@ -55,7 +55,6 @@ macro(build_exec name)
         PRIVATE
         SimdKokkosStream.cpp)
       target_compile_definitions(${EXE_NAME} PRIVATE USE_SIMD_KOKKOS)
-      target_link_libraries(${EXE_NAME} PRIVATE Kokkos::kokkossimd)
     endif()
   endif()
 

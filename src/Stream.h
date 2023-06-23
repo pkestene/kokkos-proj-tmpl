@@ -13,7 +13,7 @@
 // Array values
 #define startA (0.1)
 #define startB (0.2)
-#define startC (0.0)
+#define startC (0.05)
 #define startScalar (0.4)
 
 template <class T>
