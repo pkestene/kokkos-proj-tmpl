@@ -35,17 +35,6 @@ macro(build_exec name)
     PRIVATE
     ${name}.cpp)
 
-  # add timer
-  if (Kokkos_ENABLE_OPENMP)
-    target_sources(${EXE_NAME}
-      PRIVATE
-      OpenMPTimer.cpp)
-  elseif (NOT Kokkos_ENABLE_CUDA)
-    target_sources(${EXE_NAME}
-      PRIVATE
-      SimpleTimer.cpp)
-  endif()
-
   if (${name} STREQUAL KokkosStream_bench)
     target_sources(${EXE_NAME}
       PRIVATE

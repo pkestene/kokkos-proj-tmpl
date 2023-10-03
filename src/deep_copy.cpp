@@ -14,11 +14,11 @@ using Timer = CudaTimer;
 #  include "HipTimer.h"
 using Timer = HipTimer;
 #elif defined(KOKKOS_ENABLE_OPENMP)
-#  include "OpenMPTimer.h"
-using Timer = OpenMPTimer;
+#  include "HostTimer.h"
+using Timer = HostTimer;
 #else
-#  include "SimpleTimer.h"
-using Timer = SimpleTimer;
+#  include "HostTimer.h"
+using Timer = HostTimer;
 #endif
 
 using DataType = uint64_t;

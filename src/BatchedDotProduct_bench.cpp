@@ -18,11 +18,11 @@
 #endif
 
 #if defined(KOKKOS_ENABLE_OPENMP)
-#  include "OpenMPTimer.h"
+#  include "HostTimer.h"
 #endif
 
 #if defined(KOKKOS_ENABLE_SERIAL)
-#  include "SimpleTimer.h"
+#  include "HostTimer.h"
 #endif
 
 // define default execution space timer
@@ -31,9 +31,9 @@ using Timer = CudaTimer;
 #elif defined(KOKKOS_ENABLE_HIP)
 using Timer = HipTimer;
 #elif defined(KOKKOS_ENABLE_OPENMP)
-using Timer = OpenMPTimer;
+using Timer = HostTimer;
 #else
-using Timer = SimpleTimer;
+using Timer = HostTimer;
 #endif
 
 /*
