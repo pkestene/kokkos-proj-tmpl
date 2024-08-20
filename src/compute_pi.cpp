@@ -4,6 +4,7 @@
 #include <cstring>
 #include <sys/time.h>
 #include <cstdint>
+#include <iostream>
 
 // Include Kokkos Headers
 #include <Kokkos_Core.hpp>

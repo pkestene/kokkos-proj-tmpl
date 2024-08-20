@@ -30,6 +30,15 @@ set(KOKKOS_PROJ_TMPL_BACKEND "Undefined" CACHE STRING
 set_property(CACHE KOKKOS_PROJ_TMPL_BACKEND PROPERTY STRINGS
   "OpenMP" "Cuda" "HIP" "Undefined")
 
+
+# raise the minimum C++ standard level if not already done
+# when build kokkos, it defaults to c++-17
+# when using installed kokkos, it is not set, so defaulting to c++-17
+# kokkos 4.0.00 requires c++-17 anyway
+if (NOT "${CMAKE_CXX_STANDARD}")
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 # check if user requested a build of kokkos
 if(KOKKOS_PROJ_TMPL_BUILD_KOKKOS)
 
@@ -37,6 +46,9 @@ if(KOKKOS_PROJ_TMPL_BUILD_KOKKOS)
 
   # Kokkos default build options
 
+  # set install path
+  list (APPEND KANOP_KOKKOS_CMAKE_ARGS
+    -DCMAKE_INSTALL_PREFIX=${KOKKOS_INSTALL_DIR})
 
   # use predefined cmake args
   # can be override on the command line
@@ -94,22 +106,17 @@ if(KOKKOS_PROJ_TMPL_BUILD_KOKKOS)
 
   endif()
 
-  # we set c++ standard to c++-17 as kokkos >= 4.0.00 requires at least c++-17
-  if (NOT "${CMAKE_CXX_STANDARD}")
-    set(CMAKE_CXX_STANDARD 17)
-  endif()
-
   #find_package(Git REQUIRED)
   include (FetchContent)
 
   if (KOKKOS_PROJ_TMPL_USE_GIT_KOKKOS)
     FetchContent_Declare( kokkos_external
       GIT_REPOSITORY https://github.com/kokkos/kokkos.git
-      GIT_TAG 4.0.00
+      GIT_TAG 4.4.00
       )
   else()
     FetchContent_Declare( kokkos_external
-      URL https://github.com/kokkos/kokkos/archive/refs/tags/4.0.00.tar.gz
+      URL https://github.com/kokkos/kokkos/releases/download/4.4.00/kokkos-4.4.00.tar.gz
       )
   endif()
 
@@ -131,36 +138,20 @@ else()
   #
   # check if an already installed kokkos exists
   #
-  find_package(Kokkos 3.7.00 REQUIRED)
+  find_package(Kokkos 4.0.00 CONFIG REQUIRED)
 
   if(TARGET Kokkos::kokkos)
 
-    # set default c++ standard according to Kokkos version
-    # Kokkos >= 4.0.00 requires c++-17
-    if (NOT "${CMAKE_CXX_STANDARD}")
-      if ( ${Kokkos_VERSION} VERSION_LESS 4.0.00)
-        set(CMAKE_CXX_STANDARD 14)
-      else()
-        set(CMAKE_CXX_STANDARD 17)
-      endif()
-    endif()
+    kokkos_check( DEVICES "OpenMP" )
 
-    # kokkos_check is defined in KokkosConfigCommon.cmake
-    kokkos_check( DEVICES "OpenMP" RETURN_VALUE KOKKOS_DEVICE_ENABLE_OPENMP)
-    kokkos_check( DEVICES "Cuda" RETURN_VALUE KOKKOS_DEVICE_ENABLE_CUDA)
-    kokkos_check( DEVICES "HIP" RETURN_VALUE KOKKOS_DEVICE_ENABLE_HIP)
-
-    kokkos_check( TPLS "HWLOC" RETURN_VALUE Kokkos_TPLS_HWLOC_ENABLED)
-
-    if(KOKKOS_DEVICE_ENABLE_CUDA)
-      set(KOKKOS_PROJ_TMPL_BACKEND "Cuda")
-      kokkos_check( OPTIONS CUDA_LAMBDA RETURN_VALUE Kokkos_CUDA_LAMBDA_ENABLED)
-      kokkos_check( OPTIONS CUDA_CONSTEXPR RETURN_VALUE Kokkos_CUDA_CONSTEXPR_ENABLED)
-      kokkos_check( OPTIONS CUDA_UVM RETURN_VALUE Kokkos_CUDA_UVM_ENABLED)
-    elseif(KOKKOS_DEVICE_ENABLE_HIP)
-      set(KOKKOS_PROJ_TMPL_BACKEND "HIP")
-    elseif(KOKKOS_DEVICE_ENABLE_OPENMP)
-      set(KOKKOS_PROJ_TMPL_BACKEND "OpenMP")
+    if(KANOP_ENABLE_GPU_CUDA)
+      # kokkos_check is defined in KokkosConfigCommon.cmake
+      kokkos_check( DEVICES "Cuda" )
+      kokkos_check( OPTIONS CUDA_LAMBDA)
+      kokkos_check( OPTIONS CUDA_CONSTEXPR)
+    elseif(KANOP_ENABLE_GPU_HIP)
+      # TODO
+      kokkos_check( DEVICES "HIP" )
     endif()
 
     message("[kokkos_proj_tmpl / kokkos] Kokkos found via find_package; default backend is ${KOKKOS_PROJ_TMPL_BACKEND}")
@@ -169,7 +160,7 @@ else()
 
   else()
 
-    message(FATAL_ERROR "[kokkos_proj_tmpl / kokkos] Kokkos is required but not found by find_package. Please adjet your env variable CMAKE_PREFIX_PATH (or Kokkos_ROOT) to where Kokkos is installed on your machine !")
+    message(FATAL_ERROR "[kokkos_proj_tmpl / kokkos] Kokkos is required but not found by find_package. Please adjust your env variable CMAKE_PREFIX_PATH (or Kokkos_ROOT) to where Kokkos is installed on your machine !")
 
   endif()
 

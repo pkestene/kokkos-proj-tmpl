@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #include <vector>
 #include <fstream> // std::ofstream
+#include <iostream>
 
 // Include Kokkos Headers
 #include <Kokkos_Core.hpp>
