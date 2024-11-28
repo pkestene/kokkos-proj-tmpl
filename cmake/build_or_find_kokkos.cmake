@@ -112,11 +112,11 @@ if(KOKKOS_PROJ_TMPL_BUILD_KOKKOS)
   if (KOKKOS_PROJ_TMPL_USE_GIT_KOKKOS)
     FetchContent_Declare( kokkos_external
       GIT_REPOSITORY https://github.com/kokkos/kokkos.git
-      GIT_TAG 4.4.00
+      GIT_TAG 4.5.00
       )
   else()
     FetchContent_Declare( kokkos_external
-      URL https://github.com/kokkos/kokkos/releases/download/4.4.00/kokkos-4.4.00.tar.gz
+      URL https://github.com/kokkos/kokkos/releases/download/4.5.00/kokkos-4.5.00.tar.gz
       )
   endif()
 
