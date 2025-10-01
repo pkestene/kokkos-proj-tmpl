@@ -1,6 +1,12 @@
 # use minimum version required by Kokkos
 cmake_minimum_required(VERSION 3.16)
 
+# CMake 3.24 and above prefers to set the timestamps of all extracted contents to the time of the
+# extraction.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 project(kokkos-proj-tmpl
   LANGUAGES CXX)
 
