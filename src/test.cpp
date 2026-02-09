@@ -6,10 +6,10 @@ KOKKOS_FUNCTION
 constexpr Kokkos::Array<double, 5000>
 compute_coefs()
 {
-  Kokkos::Array<long double, 5> x{ 1., 2., 3., 4., 5. };
-  Kokkos::Array<double, 5000>   y{};
+  Kokkos::Array<double, 5>    x{ 1., 2., 3., 4., 5. };
+  Kokkos::Array<double, 5000> y{};
   for (int i = 0; i < y.size(); ++i)
-    y[i] = static_cast<double>(x[i % 5]);
+    y[i] = x[i % 5];
   return y;
 }
 

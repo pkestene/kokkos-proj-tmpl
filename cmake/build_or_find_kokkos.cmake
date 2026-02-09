@@ -32,11 +32,11 @@ set_property(CACHE KOKKOS_PROJ_TMPL_BACKEND PROPERTY STRINGS
 
 
 # raise the minimum C++ standard level if not already done
-# when build kokkos, it defaults to c++-17
-# when using installed kokkos, it is not set, so defaulting to c++-17
-# kokkos 4.0.00 requires c++-17 anyway
+# when build kokkos, it defaults to c++-20
+# when using installed kokkos, it is not set, so defaulting to c++-20
+# kokkos 5.0.0 requires c++-20 anyway
 if (NOT "${CMAKE_CXX_STANDARD}")
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 
 # check if user requested a build of kokkos
@@ -112,11 +112,11 @@ if(KOKKOS_PROJ_TMPL_BUILD_KOKKOS)
   if (KOKKOS_PROJ_TMPL_USE_GIT_KOKKOS)
     FetchContent_Declare( kokkos_external
       GIT_REPOSITORY https://github.com/kokkos/kokkos.git
-      GIT_TAG 4.7.00
+      GIT_TAG 5.0.2
       )
   else()
     FetchContent_Declare( kokkos_external
-      URL https://github.com/kokkos/kokkos/releases/download/4.7.00/kokkos-4.7.00.tar.gz
+      URL https://github.com/kokkos/kokkos/releases/download/5.0.2/kokkos-5.0.2.tar.gz
       )
   endif()
 
@@ -138,7 +138,7 @@ else()
   #
   # check if an already installed kokkos exists
   #
-  find_package(Kokkos 4.0.00 CONFIG REQUIRED)
+  find_package(Kokkos 5.0.0 CONFIG REQUIRED)
 
   if(TARGET Kokkos::kokkos)
 
