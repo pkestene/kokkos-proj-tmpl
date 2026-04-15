@@ -108,11 +108,11 @@ if(KOKKOS_PROJ_TMPL_BUILD_KOKKOS)
   if (KOKKOS_PROJ_TMPL_USE_GIT_KOKKOS)
     FetchContent_Declare( kokkos_external
       GIT_REPOSITORY https://github.com/kokkos/kokkos.git
-      GIT_TAG 5.0.2
+      GIT_TAG 5.1.0
       )
   else()
     FetchContent_Declare( kokkos_external
-      URL https://github.com/kokkos/kokkos/releases/download/5.0.2/kokkos-5.0.2.tar.gz
+      URL https://github.com/kokkos/kokkos/releases/download/5.1.0/kokkos-5.1.0.tar.gz
       )
   endif()
 
@@ -134,7 +134,7 @@ else()
   #
   # check if an already installed kokkos exists
   #
-  find_package(Kokkos 5.0.0 CONFIG REQUIRED)
+  find_package(Kokkos 5.1.0 CONFIG REQUIRED)
 
   if(TARGET Kokkos::kokkos)
 
@@ -143,7 +143,6 @@ else()
     if(KANOP_ENABLE_GPU_CUDA)
       # kokkos_check is defined in KokkosConfigCommon.cmake
       kokkos_check( DEVICES "Cuda" )
-      kokkos_check( OPTIONS CUDA_LAMBDA)
       kokkos_check( OPTIONS CUDA_CONSTEXPR)
     elseif(KANOP_ENABLE_GPU_HIP)
       # TODO
